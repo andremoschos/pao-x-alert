@@ -8,7 +8,7 @@ import requests
 from twscrape import API, gather
 
 STATE = Path("seen.json")
-ENGINE = "twscrape_v1"
+ENGINE = "twscrape_v2"
 MAX_SEEN = 2000
 QUERY = "panathinaikos"
 
@@ -23,23 +23,27 @@ def load_state():
         return {
             "engine": data.get("engine"),
             "initialized": bool(data.get("initialized", False)),
-            "ids": list(data.get("ids", [])),
+            "ids": [str(x) for x in data.get("ids", [])],
         }
     except Exception:
         return {"engine": None, "initialized": False, "ids": []}
 
 
 def save_state(ids):
+    # Deterministic order: prevents seen.json from changing on every run.
+    ordered = sorted({str(x) for x in ids}, key=int)
+    ordered = ordered[-MAX_SEEN:]
+
     STATE.write_text(
         json.dumps(
             {
                 "engine": ENGINE,
                 "initialized": True,
-                "ids": list(ids)[-MAX_SEEN:],
+                "ids": ordered,
             },
             ensure_ascii=False,
             indent=2,
-        ),
+        ) + "\n",
         encoding="utf-8",
     )
 
@@ -64,10 +68,7 @@ def notify(tweet):
 
 async def fetch_latest():
     db = "/tmp/twscrape_accounts.db"
-    try:
-        Path(db).unlink(missing_ok=True)
-    except Exception:
-        pass
+    Path(db).unlink(missing_ok=True)
 
     api = API(db, raise_when_no_account=True, wait_timeout=30, wait_interval=1)
     cookie_header = f"auth_token={AUTH}; ct0={CT0}"
@@ -110,10 +111,11 @@ async def main():
     if not tweets:
         raise RuntimeError("X search returned 0 posts")
 
+    # First run of this fixed version: baseline only, no old-post spam.
     if state["engine"] != ENGINE:
         previous.update(t["id"] for t in tweets)
         save_state(previous)
-        print(f"New scanner baseline saved: {len(tweets)} posts")
+        print(f"Fixed scanner baseline saved: {len(tweets)} posts")
         return
 
     now = datetime.now(timezone.utc)
