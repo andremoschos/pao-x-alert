@@ -1,29 +1,53 @@
-import os, json, re, time
-from datetime import datetime, timezone
+import os
+import json
+import asyncio
 from pathlib import Path
-import requests
-from playwright.sync_api import sync_playwright
+from datetime import datetime, timezone, timedelta
 
-SEARCH_URL = "https://x.com/search?q=panathinaikos&src=typeahead_click&f=live"
+import requests
+from twscrape import API, gather
+
 STATE = Path("seen.json")
-MAX_SEEN = 1500
+ENGINE = "twscrape_v1"
+MAX_SEEN = 2000
+QUERY = "panathinaikos"
 
 AUTH = os.environ["X_AUTH_TOKEN"]
 CT0 = os.environ["X_CT0"]
 TOPIC = os.environ["NTFY_TOPIC"]
 
-def load_seen():
+
+def load_state():
     try:
         data = json.loads(STATE.read_text(encoding="utf-8"))
-        return set(data.get("ids", [])), bool(data.get("initialized", False))
+        return {
+            "engine": data.get("engine"),
+            "initialized": bool(data.get("initialized", False)),
+            "ids": list(data.get("ids", [])),
+        }
     except Exception:
-        return set(), False
+        return {"engine": None, "initialized": False, "ids": []}
 
-def save_seen(seen):
-    STATE.write_text(json.dumps(
-        {"initialized": True, "ids": list(seen)[-MAX_SEEN:]},
-        ensure_ascii=False, indent=2
-    ), encoding="utf-8")
+
+def save_state(ids):
+    STATE.write_text(
+        json.dumps(
+            {
+                "engine": ENGINE,
+                "initialized": True,
+                "ids": list(ids)[-MAX_SEEN:],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+def snowflake_datetime(tweet_id: int) -> datetime:
+    ms = (int(tweet_id) >> 22) + 1288834974657
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+
 
 def notify(tweet):
     url = f"https://ntfy.sh/{TOPIC}"
@@ -37,80 +61,81 @@ def notify(tweet):
     r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
     r.raise_for_status()
 
-def main():
-    seen, initialized = load_seen()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            locale="en-US",
-            user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/151.0.0.0 Safari/537.36")
-        )
-        context.add_cookies([
-            {"name": "auth_token", "value": AUTH, "domain": ".x.com", "path": "/", "secure": True, "httpOnly": True},
-            {"name": "ct0", "value": CT0, "domain": ".x.com", "path": "/", "secure": True},
-        ])
+async def fetch_latest():
+    db = "/tmp/twscrape_accounts.db"
+    try:
+        Path(db).unlink(missing_ok=True)
+    except Exception:
+        pass
 
-        page = context.new_page()
-        page.goto(SEARCH_URL, wait_until="domcontentloaded", timeout=90000)
-        page.wait_for_timeout(8000)
+    api = API(db, raise_when_no_account=True, wait_timeout=30, wait_interval=1)
+    cookie_header = f"auth_token={AUTH}; ct0={CT0}"
+    await api.pool.add_account_cookies("newspao", cookie_header)
 
-        # If X redirects to login, the cookies need refreshing.
-        if "/i/flow/login" in page.url or page.locator('input[autocomplete="username"]').count():
-            raise RuntimeError("X_LOGIN_REQUIRED: refresh X_AUTH_TOKEN and X_CT0 GitHub secrets")
+    results = await gather(api.search(QUERY, limit=60))
 
-        articles = page.locator('article[data-testid="tweet"]')
-        count = articles.count()
-        tweets = []
+    tweets = []
+    seen_now = set()
 
-        for i in range(min(count, 30)):
-            article = articles.nth(i)
-            href = None
-            for j in range(article.locator('a[href*="/status/"]').count()):
-                h = article.locator('a[href*="/status/"]').nth(j).get_attribute("href")
-                if h and re.search(r"/status/\d+", h):
-                    href = h
-                    break
-            if not href:
-                continue
+    for t in results:
+        tid = str(t.id)
+        if tid in seen_now:
+            continue
+        seen_now.add(tid)
 
-            m = re.match(r"^/([^/]+)/status/(\d+)", href)
-            if not m:
-                continue
+        username = getattr(getattr(t, "user", None), "username", "") or "unknown"
+        text = (getattr(t, "rawContent", "") or "").strip() or "(post without text)"
 
-            author, tid = "@" + m.group(1), m.group(2)
-            text_node = article.locator('[data-testid="tweetText"]')
-            text = text_node.first.inner_text().strip() if text_node.count() else "(post without text)"
-            tweets.append({
+        tweets.append(
+            {
                 "id": tid,
-                "author": author,
+                "author": f"@{username}",
                 "text": text,
-                "url": "https://x.com" + href.split("?")[0],
-            })
+                "url": f"https://x.com/{username}/status/{tid}",
+                "created": snowflake_datetime(int(tid)),
+            }
+        )
 
-        browser.close()
+    return tweets
+
+
+async def main():
+    state = load_state()
+    previous = set(state["ids"])
+
+    tweets = await fetch_latest()
+    print(f"Search results: {len(tweets)}")
 
     if not tweets:
-        raise RuntimeError("No posts found. X may have changed the page or blocked the runner.")
+        raise RuntimeError("X search returned 0 posts")
 
-    # First successful run sets baseline: no old-post spam.
-    if not initialized:
-        seen.update(t["id"] for t in tweets)
-        save_seen(seen)
-        print(f"Baseline saved: {len(tweets)} visible posts.")
+    if state["engine"] != ENGINE:
+        previous.update(t["id"] for t in tweets)
+        save_state(previous)
+        print(f"New scanner baseline saved: {len(tweets)} posts")
         return
 
-    fresh = [t for t in tweets if t["id"] not in seen]
-    for t in reversed(fresh):
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(minutes=20)
+
+    fresh = [
+        t for t in tweets
+        if t["id"] not in previous and t["created"] >= cutoff
+    ]
+
+    fresh.sort(key=lambda x: x["created"])
+
+    for t in fresh:
         notify(t)
-        seen.add(t["id"])
+        previous.add(t["id"])
         print("Sent:", t["url"])
 
-    if fresh:
-        save_seen(seen)
+    previous.update(t["id"] for t in tweets)
+    save_state(previous)
+
     print(f"Fresh posts: {len(fresh)}")
 
+
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
