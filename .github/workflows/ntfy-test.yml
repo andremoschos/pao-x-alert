@@ -1,0 +1,16 @@
+name: NTFY Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send test notification
+        run: |
+          curl -fsS \
+            -H "Title: NTFY TEST FROM GITHUB" \
+            -H "Priority: high" \
+            -d "Αν βλέπεις αυτό, το GitHub -> ntfy δουλεύει σωστά." \
+            https://ntfy.sh/newspao-pao-847291
