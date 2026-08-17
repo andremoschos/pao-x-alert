@@ -37,7 +37,7 @@ jobs:
       - name: Check Google
         env:
           GOOGLE_ALERT_RSS: ${{ secrets.GOOGLE_ALERT_RSS }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_GOOGLE_TOPIC: ${{ secrets.NTFY_GOOGLE_TOPIC }}
         run: python google_monitor.py
 
       - name: Save seen items
