@@ -9,7 +9,7 @@ import requests
 STATE = Path("google_seen.json")
 MAX_SEEN = 3000
 RSS_URL = os.environ["GOOGLE_ALERT_RSS"]
-TOPIC = os.environ["NTFY_TOPIC"]
+TOPIC = os.environ["NTFY_GOOGLE_TOPIC"]
 
 def load_seen():
     try:
@@ -118,8 +118,6 @@ def main():
     entries = parse_entries(r.text)
     print(f"Google Alert results: {len(entries)}")
 
-    # A brand-new Google Alert feed can legitimately be empty.
-    # Treat that as a successful no-op and wait for the first result.
     if not entries:
         print("Google Alert feed is empty for now; waiting for first result.")
         return
