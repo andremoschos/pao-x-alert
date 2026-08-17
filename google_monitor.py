@@ -10,14 +10,16 @@ import xml.etree.ElementTree as ET
 import requests
 
 STATE = Path("google_seen.json")
-ENGINE = "google_news_plus_web_v1"
-MAX_SEEN = 8000
+ENGINE = "google_global_news_plus_web_v2"
+MAX_SEEN = 12000
 
 ALERT_RSS = os.environ["GOOGLE_ALERT_RSS"]
 TOPIC = os.environ["NTFY_GOOGLE_TOPIC"]
 
+# Greek + Latin spellings that commonly appear internationally.
 TERMS = [
     "panathinaikos",
+    "Panathinaïkos",
     "παναθηναϊκός",
     "παναθηναϊκού",
     "παναθηναϊκό",
@@ -25,6 +27,31 @@ TERMS = [
     "παναθηναικου",
     "παναθηναικο",
 ]
+
+# Multiple Google News editions to widen international coverage.
+# This does not mean literally every country indexed by Google,
+# but it greatly broadens coverage beyond the Greek edition.
+NEWS_EDITIONS = [
+    ("GR", "el", "el"),       # Greece
+    ("US", "en-US", "en"),    # USA
+    ("GB", "en-GB", "en"),    # United Kingdom
+    ("ES", "es", "es"),       # Spain
+    ("IT", "it", "it"),       # Italy
+    ("FR", "fr", "fr"),       # France
+    ("DE", "de", "de"),       # Germany
+    ("TR", "tr", "tr"),       # Turkey
+    ("NL", "nl", "nl"),       # Netherlands
+    ("PL", "pl", "pl"),       # Poland
+    ("RO", "ro", "ro"),       # Romania
+    ("CZ", "cs", "cs"),       # Czechia
+    ("RS", "sr", "sr"),       # Serbia
+    ("HR", "hr", "hr"),       # Croatia
+    ("AU", "en-AU", "en"),    # Australia
+    ("CA", "en-CA", "en"),    # Canada
+    ("IN", "en-IN", "en"),    # India
+]
+
+QUERY = "(" + " OR ".join(f'"{t}"' for t in TERMS) + ") when:1d"
 
 
 def load_state():
@@ -78,14 +105,13 @@ def unwrap_google_url(url):
 
 def canonical_title(title):
     t = clean_text(title).lower()
-    # Remove common trailing publisher suffix from Google News titles.
-    t = re.sub(r"\s+-\s+[^-]{1,80}$", "", t)
+    # Google News often appends " - Publisher".
+    t = re.sub(r"\s+-\s+[^-]{1,100}$", "", t)
     t = re.sub(r"\s+", " ", t).strip()
     return t
 
 
 def make_key(title, url, fallback=""):
-    # Title-first key helps dedupe the same story seen in News + Web alert.
     basis = canonical_title(title) or unwrap_google_url(url) or fallback
     return hashlib.sha256(basis.encode("utf-8", errors="ignore")).hexdigest()
 
@@ -109,6 +135,7 @@ def parse_google_alert_atom(xml_text):
             "url": url,
             "source": "WEB",
             "publisher": "",
+            "edition": "Google Alerts / Web",
         })
 
     return entries
@@ -121,14 +148,18 @@ def fetch_web_alert():
         headers={"User-Agent": "Mozilla/5.0"},
     )
     r.raise_for_status()
+
     entries = parse_google_alert_atom(r.text)
     print(f"Google Web/Alerts results: {len(entries)}")
     return entries
 
 
-def fetch_google_news_term(term):
-    q = quote(f'"{term}" when:1d')
-    url = f"https://news.google.com/rss/search?q={q}&hl=el&gl=GR&ceid=GR:el"
+def fetch_google_news_edition(country, hl, lang):
+    q = quote(QUERY)
+    url = (
+        f"https://news.google.com/rss/search?q={q}"
+        f"&hl={quote(hl)}&gl={country}&ceid={country}:{lang}"
+    )
 
     r = requests.get(
         url,
@@ -153,9 +184,10 @@ def fetch_google_news_term(term):
             "url": link,
             "source": "NEWS",
             "publisher": publisher,
+            "edition": country,
         })
 
-    print(f"Google News [{term}]: {len(entries)}")
+    print(f"Google News [{country}]: {len(entries)}")
     return entries
 
 
@@ -163,14 +195,14 @@ def notify(entry):
     endpoint = f"https://ntfy.sh/{TOPIC}"
 
     if entry["source"] == "NEWS":
-        title = "NEO GOOGLE NEWS: PANATHINAIKOS"
+        alert_title = "NEO GOOGLE NEWS: PANATHINAIKOS"
         tags = "newspaper"
     else:
-        title = "NEO GOOGLE WEB: PANATHINAIKOS"
+        alert_title = "NEO GOOGLE WEB: PANATHINAIKOS"
         tags = "mag"
 
     headers = {
-        "Title": title,
+        "Title": alert_title,
         "Priority": "high",
         "Tags": tags,
     }
@@ -179,8 +211,13 @@ def notify(entry):
         headers["Click"] = entry["url"]
 
     body = entry["title"]
+
     if entry.get("publisher"):
         body += f"\nΠηγή: {entry['publisher']}"
+
+    if entry["source"] == "NEWS":
+        body += f"\nGoogle News edition: {entry['edition']}"
+
     if entry["url"]:
         body += f"\n{entry['url']}"
 
@@ -199,35 +236,44 @@ def main():
 
     merged = {}
 
-    # 1) Broad web monitoring from the Google Alert RSS
+    # 1) Broad Web monitoring via Google Alerts
     try:
         for e in fetch_web_alert():
             merged[e["id"]] = e
     except Exception as exc:
         print(f"Google Web/Alerts error: {exc}")
 
-    # 2) Direct Google News monitoring
-    for term in TERMS:
+    # 2) International Google News editions
+    successful_editions = 0
+
+    for country, hl, lang in NEWS_EDITIONS:
         try:
-            for e in fetch_google_news_term(term):
-                # If the same story exists in both sources, prefer NEWS labeling.
+            entries = fetch_google_news_edition(country, hl, lang)
+            successful_editions += 1
+
+            for e in entries:
+                # Prefer NEWS data if the same story is also in Web alert.
                 merged[e["id"]] = e
+
         except Exception as exc:
-            print(f"Google News error [{term}]: {exc}")
+            # One regional edition failing should not stop all notifications.
+            print(f"Google News error [{country}]: {exc}")
+
+    print(f"Successful Google News editions: {successful_editions}/{len(NEWS_EDITIONS)}")
+    print(f"Combined unique Google results: {len(merged)}")
 
     entries = list(merged.values())
-    print(f"Combined unique Google results: {len(entries)}")
 
     if not entries:
         print("No Google results right now.")
         return
 
-    # First run after switching to this combined scanner:
-    # baseline only so old results don't flood ntfy.
+    # Baseline after installing this global version:
+    # avoids flooding ntfy with already-existing stories.
     if state["engine"] != ENGINE:
         seen.update(e["id"] for e in entries)
         save_state(seen)
-        print(f"Combined Google baseline saved: {len(entries)} entries")
+        print(f"GLOBAL Google baseline saved: {len(entries)} entries")
         return
 
     fresh = [e for e in entries if e["id"] not in seen]
@@ -240,7 +286,7 @@ def main():
     seen.update(e["id"] for e in entries)
     save_state(seen)
 
-    print(f"Fresh combined Google results: {len(fresh)}")
+    print(f"Fresh GLOBAL Google results: {len(fresh)}")
 
 
 if __name__ == "__main__":
