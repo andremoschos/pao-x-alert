@@ -1,4 +1,4 @@
-name: Panathinaikos X Watch
+name: Panathinaikos X + Google Watch
 
 on:
   workflow_dispatch:
@@ -7,13 +7,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: panathinaikos-x-watch
+  group: panathinaikos-watch
   cancel-in-progress: false
 
 jobs:
   watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v4
@@ -34,20 +34,25 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python monitor.py
 
-      - name: Save seen posts
+      - name: Check Google
+        env:
+          GOOGLE_ALERT_RSS: ${{ secrets.GOOGLE_ALERT_RSS }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python google_monitor.py
+
+      - name: Save seen items
         if: success()
         run: |
-          if git diff --quiet -- seen.json; then
-            echo "No seen.json changes"
-            exit 0
-          fi
-
           git config user.name "pao-x-alert"
           git config user.email "actions@users.noreply.github.com"
 
-          git add seen.json
-          git commit -m "Update seen posts"
+          git add seen.json google_seen.json
 
-          # If main changed while this run was working, rebase first.
+          if git diff --cached --quiet; then
+            echo "No state changes"
+            exit 0
+          fi
+
+          git commit -m "Update seen items"
           git pull --rebase origin main
           git push origin HEAD:main
