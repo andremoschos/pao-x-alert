@@ -1006,8 +1006,8 @@ async def main():
     # -----------------------------------------
 
     for source in WEBSITE_SOURCES:
-    try:
         try:
+            try:
             results_by_source[
                 source["key"]
             ] = fetch_website(source)
@@ -1031,7 +1031,7 @@ async def main():
             else:
                 raise
 
-    except Exception as exc:
+        except Exception as exc:
         print(
             f"{source['key']} website error: "
             f"{exc}"
