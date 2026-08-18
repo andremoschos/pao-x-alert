@@ -14,7 +14,7 @@ QUERY = (
     'panathinaikos OR '
     '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
     '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
-    'paobc OR fmeetsdata'
+    'from:paobc OR from:fmeetsdata'
 )
 
 AUTH = os.environ["X_AUTH_TOKEN"]
