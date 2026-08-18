@@ -8,7 +8,7 @@ import requests
 from twscrape import API, gather
 
 STATE = Path("seen.json")
-ENGINE = "twscrape_v2"
+ENGINE = "twscrape_v3_full_terms"
 MAX_SEEN = 2000
 QUERY = (
     'panathinaikos OR '
