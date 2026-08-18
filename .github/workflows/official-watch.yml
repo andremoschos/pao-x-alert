@@ -2,6 +2,8 @@ name: Official PAO Watch
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "2-59/5 * * * *"
 
 permissions:
   contents: write
