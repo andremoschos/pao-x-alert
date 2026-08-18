@@ -1,0 +1,53 @@
+name: YouTube PAO Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "4-59/5 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: youtube-pao-watch
+  cancel-in-progress: false
+
+jobs:
+  youtube-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install requests
+
+      - name: Check YouTube
+        env:
+          NTFY_YOUTUBE_TOPIC: ${{ secrets.NTFY_YOUTUBE_TOPIC }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python youtube_monitor.py
+
+      - name: Save YouTube seen items
+        if: success()
+        run: |
+          git config user.name "pao-x-alert"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add youtube_seen.json
+
+          if git diff --cached --quiet; then
+            echo "No YouTube state changes"
+            exit 0
+          fi
+
+          git commit -m "Update YouTube seen items"
+          git pull --rebase origin main
+          git push origin HEAD:main
