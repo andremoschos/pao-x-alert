@@ -86,12 +86,6 @@ X_SOURCES = [
 
 BROWSER_SOURCES = [
     {
-        "key": "instagram_pae",
-        "org": "PAE",
-        "platform": "INSTAGRAM",
-        "url": "https://www.instagram.com/fcpanathinaikos/",
-    },
-    {
         "key": "facebook_pae",
         "org": "PAE",
         "platform": "FACEBOOK",
@@ -102,18 +96,6 @@ BROWSER_SOURCES = [
         "org": "KAE",
         "platform": "FACEBOOK",
         "url": "https://www.facebook.com/paobcgr/",
-    },
-    {
-        "key": "instagram_kae",
-        "org": "KAE",
-        "platform": "INSTAGRAM",
-        "url": "https://www.instagram.com/paobcgr/",
-    },
-    {
-        "key": "instagram_ao",
-        "org": "AO",
-        "platform": "INSTAGRAM",
-        "url": "https://www.instagram.com/panathinaikos_1908/",
     },
 ]
 
