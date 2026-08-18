@@ -9,6 +9,7 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse, parse_qs
 
 import requests
+import curl_cffi
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
@@ -208,21 +209,29 @@ class HeadingParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.in_heading = False
+        self.outer_href = None
         self.href = None
         self.parts = []
         self.items = []
 
     def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+
+        # Κρατάμε και link που "αγκαλιάζει" το heading,
+        # όπως κάνει το pao1908.com.
+        if tag == "a":
+            href = attrs.get("href")
+
+            if href:
+                if self.in_heading:
+                    self.href = href
+                else:
+                    self.outer_href = href
+
         if tag in ("h1", "h2", "h3", "h4"):
             self.in_heading = True
-            self.href = None
+            self.href = self.outer_href
             self.parts = []
-
-        elif self.in_heading and tag == "a":
-            attrs = dict(attrs)
-
-            if attrs.get("href"):
-                self.href = attrs["href"]
 
     def handle_data(self, data):
         if self.in_heading:
@@ -243,6 +252,9 @@ class HeadingParser(HTMLParser):
             self.href = None
             self.parts = []
 
+        elif tag == "a" and not self.in_heading:
+            self.outer_href = None
+
 
 def valid_article_url(full, source):
     parsed = urlparse(full)
@@ -255,10 +267,18 @@ def valid_article_url(full, source):
     if not path:
         return False
 
-    source_path = urlparse(source["url"]).path.rstrip("/")
+    source_path = urlparse(
+        source["url"]
+    ).path.rstrip("/")
 
     if path == source_path:
         return False
+
+    # Στον Ερασιτέχνη δεχόμαστε ΜΟΝΟ
+    # πραγματικές ειδήσεις /nea/...
+    if source["key"] == "site_ao":
+        if not path.startswith("/nea/"):
+            return False
 
     blocked = [
         "/category/",
@@ -270,7 +290,7 @@ def valid_article_url(full, source):
     ]
 
     for x in blocked:
-        if x in path and source["org"] != "AO":
+        if x in path:
             return False
 
     extensions = (
@@ -292,31 +312,74 @@ def valid_article_url(full, source):
 
 
 def fetch_website(source):
-    r = requests.get(
-        source["url"],
-        timeout=30,
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 "
-                "(Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 "
-                "Chrome/131 Safari/537.36"
-            )
-        },
-    )
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 "
+            "(Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
+            "Chrome/131 Safari/537.36"
+        ),
+        "Accept-Language": "el-GR,el;q=0.9,en;q=0.8",
+    }
 
-    r.raise_for_status()
+    html = None
+
+    # Πρώτη προσπάθεια: κανονικό requests.
+    try:
+        r = requests.get(
+            source["url"],
+            timeout=30,
+            headers=headers,
+        )
+
+        r.raise_for_status()
+        html = r.text
+
+    except Exception as exc:
+        print(
+            f"{source['key']} normal request failed: "
+            f"{exc}"
+        )
+
+        # Δεύτερη προσπάθεια:
+        # browser-like request ΑΠΕΥΘΕΙΑΣ στο ίδιο official site.
+        try:
+            r = curl_cffi.get(
+                source["url"],
+                impersonate="chrome",
+                timeout=30,
+            )
+
+            r.raise_for_status()
+            html = r.text
+
+            print(
+                f"{source['key']} curl browser fallback OK"
+            )
+
+        except Exception as fallback_exc:
+            raise RuntimeError(
+                f"normal request + browser fallback failed: "
+                f"{fallback_exc}"
+            )
 
     parser = HeadingParser()
-    parser.feed(r.text)
+    parser.feed(html)
 
     out = []
     used = set()
 
     for title, href in parser.items:
-        full = urljoin(source["url"], href)
+        full = urljoin(
+            source["url"],
+            href,
+        )
 
-        if not valid_article_url(full, source):
+        if not valid_article_url(
+            full,
+            source,
+        ):
             continue
 
         if full in used:
