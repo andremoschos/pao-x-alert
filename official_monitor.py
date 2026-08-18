@@ -42,11 +42,11 @@ WEBSITE_SOURCES = [
         "article_prefix": None,
     },
     {
-        "key": "site_kae",
-        "org": "KAE",
-        "url": "https://www.paobc.gr/news/",
-        "host": "www.paobc.gr",
-        "article_prefix": "/news/",
+    "key": "site_kae",
+    "org": "KAE",
+    "url": "https://www.paobc.gr/news/",
+    "host": "www.paobc.gr",
+    "article_prefix": None,
     },
 ]
 
