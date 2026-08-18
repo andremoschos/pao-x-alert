@@ -1,7 +1,9 @@
-name: Panathinaikos Full Watch
+name: X / Twitter PAO Watch
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -11,21 +13,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  watch:
+  x-watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install
+      - name: Install X dependencies
         run: |
-          pip install -r requirements.txt
-          python -m playwright install --with-deps chromium
+          pip install requests "twscrape[curl]"
 
       - name: Check X
         env:
@@ -34,36 +37,18 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python monitor.py
 
-      - name: Check Google
-        env:
-          GOOGLE_ALERT_RSS: ${{ secrets.GOOGLE_ALERT_RSS }}
-          NTFY_GOOGLE_TOPIC: ${{ secrets.NTFY_GOOGLE_TOPIC }}
-        run: python google_monitor.py
-
-      - name: Check Official PAO
-        env:
-          NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
-        run: python official_monitor.py
-
-      - name: Check YouTube
-        env:
-          NTFY_YOUTUBE_TOPIC: ${{ secrets.NTFY_YOUTUBE_TOPIC }}
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: python youtube_monitor.py
-
-      - name: Save seen items
-        if: success()
+      - name: Save X seen items
         run: |
           git config user.name "pao-x-alert"
           git config user.email "actions@users.noreply.github.com"
 
-          git add seen.json google_seen.json official_seen.json youtube_seen.json
+          git add seen.json
 
           if git diff --cached --quiet; then
-            echo "No state changes"
+            echo "No X state changes"
             exit 0
           fi
 
-          git commit -m "Update seen items"
+          git commit -m "Update X seen items"
           git pull --rebase origin main
           git push origin HEAD:main
