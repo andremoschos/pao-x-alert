@@ -406,7 +406,95 @@ def fetch_website(source):
     )
 
     return out[:50]
+async def fetch_website_browser(source):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True
+        )
 
+        context = await browser.new_context(
+            viewport={
+                "width": 1400,
+                "height": 1000,
+            },
+            locale="el-GR",
+            user_agent=(
+                "Mozilla/5.0 "
+                "(Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "(KHTML, like Gecko) "
+                "Chrome/131 Safari/537.36"
+            ),
+        )
+
+        page = await context.new_page()
+
+        try:
+            # Πρώτα homepage για cookies/session
+            await page.goto(
+                "https://www.paobc.gr/",
+                wait_until="domcontentloaded",
+                timeout=60000,
+            )
+
+            await page.wait_for_timeout(2500)
+
+            # Μετά ΑΚΡΙΒΩΣ η επίσημη σελίδα News
+            await page.goto(
+                source["url"],
+                wait_until="domcontentloaded",
+                timeout=60000,
+            )
+
+            await page.wait_for_timeout(5000)
+
+            html = await page.content()
+
+        finally:
+            await browser.close()
+
+    parser = HeadingParser()
+    parser.feed(html)
+
+    out = []
+    used = set()
+
+    for title, href in parser.items:
+        full = urljoin(
+            source["url"],
+            href,
+        )
+
+        if not valid_article_url(
+            full,
+            source,
+        ):
+            continue
+
+        if full in used:
+            continue
+
+        used.add(full)
+
+        out.append(
+            {
+                "id": f"{source['key']}:{full}",
+                "source_key": source["key"],
+                "org": source["org"],
+                "platform": "WEBSITE",
+                "title": title,
+                "text": "",
+                "author": "",
+                "url": full,
+            }
+        )
+
+    print(
+        f"{source['key']} Playwright website results: "
+        f"{len(out)}"
+    )
+
+    return out[:50]
 
 # =========================================================
 # OFFICIAL YOUTUBE
