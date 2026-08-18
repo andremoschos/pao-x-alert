@@ -19,7 +19,7 @@ OFFICIAL_CHANNELS = [
 
 # One OR query, so the broad search uses one API search call.
 QUERY = "panathinaikos|παναθηναϊκός|παναθηναϊκού|παναθηναϊκό|παναθηναικος|παναθηναικου|παναθηναικο"
-SEARCH_EVERY_MINUTES = 0
+SEARCH_EVERY_MINUTES = 15
 
 def now():
     return datetime.now(timezone.utc)
