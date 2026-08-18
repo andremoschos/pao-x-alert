@@ -9,7 +9,6 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse, parse_qs
 
 import requests
-import curl_cffi
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
@@ -19,13 +18,12 @@ ENGINE = "official_pao_13_sources_v1"
 MAX_SEEN = 10000
 
 TOPIC = os.environ["NTFY_OFFICIAL_TOPIC"]
-
 X_AUTH_TOKEN = os.environ["X_AUTH_TOKEN"]
 X_CT0 = os.environ["X_CT0"]
 
 
 # =========================================================
-# ΜΟΝΟ ΟΙ ΕΠΙΣΗΜΕΣ ΠΗΓΕΣ ΠΟΥ ΕΧΟΥΜΕ ΕΓΚΡΙΝΕΙ
+# OFFICIAL SOURCES ONLY
 # =========================================================
 
 WEBSITE_SOURCES = [
@@ -34,18 +32,21 @@ WEBSITE_SOURCES = [
         "org": "PAE",
         "url": "https://www.pao.gr/all-news/",
         "host": "www.pao.gr",
+        "article_prefix": None,
     },
     {
         "key": "site_ao",
         "org": "AO",
         "url": "https://www.pao1908.com/category/nea/",
         "host": "www.pao1908.com",
+        "article_prefix": None,
     },
     {
         "key": "site_kae",
         "org": "KAE",
         "url": "https://www.paobc.gr/news/",
         "host": "www.paobc.gr",
+        "article_prefix": "/news/",
     },
 ]
 
@@ -123,14 +124,30 @@ BROWSER_SOURCES = [
 
 def load_state():
     try:
-        data = json.loads(STATE.read_text(encoding="utf-8"))
+        data = json.loads(
+            STATE.read_text(
+                encoding="utf-8"
+            )
+        )
+
         return {
             "engine": data.get("engine"),
-            "ids": set(str(x) for x in data.get("ids", [])),
+            "ids": set(
+                str(x)
+                for x in data.get(
+                    "ids",
+                    [],
+                )
+            ),
             "initialized_sources": set(
-                str(x) for x in data.get("initialized_sources", [])
+                str(x)
+                for x in data.get(
+                    "initialized_sources",
+                    [],
+                )
             ),
         }
+
     except Exception:
         return {
             "engine": None,
@@ -139,19 +156,32 @@ def load_state():
         }
 
 
-def save_state(ids, initialized_sources):
-    ordered = sorted(set(str(x) for x in ids))
+def save_state(
+    ids,
+    initialized_sources,
+):
+    ordered = sorted(
+        set(
+            str(x)
+            for x in ids
+        )
+    )
 
     STATE.write_text(
         json.dumps(
             {
                 "engine": ENGINE,
-                "ids": ordered[-MAX_SEEN:],
-                "initialized_sources": sorted(initialized_sources),
+                "ids": ordered[
+                    -MAX_SEEN:
+                ],
+                "initialized_sources": sorted(
+                    initialized_sources
+                ),
             },
             ensure_ascii=False,
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -161,16 +191,16 @@ def save_state(ids, initialized_sources):
 # =========================================================
 
 def notify(item):
-    endpoint = f"https://ntfy.sh/{TOPIC}"
-
-    title = (
-        f"OFFICIAL PAO - "
-        f"{item['org']} - "
-        f"{item['platform']}"
+    endpoint = (
+        f"https://ntfy.sh/{TOPIC}"
     )
 
     headers = {
-        "Title": title,
+        "Title": (
+            f"OFFICIAL PAO - "
+            f"{item['org']} - "
+            f"{item['platform']}"
+        ),
         "Priority": "high",
         "Tags": "green_circle",
         "Click": item["url"],
@@ -179,21 +209,33 @@ def notify(item):
     body_parts = []
 
     if item.get("author"):
-        body_parts.append(item["author"])
+        body_parts.append(
+            item["author"]
+        )
 
     if item.get("title"):
-        body_parts.append(item["title"])
+        body_parts.append(
+            item["title"]
+        )
 
     if item.get("text"):
-        body_parts.append(item["text"])
+        body_parts.append(
+            item["text"]
+        )
 
-    body_parts.append(item["url"])
+    body_parts.append(
+        item["url"]
+    )
 
-    body = "\n".join(x for x in body_parts if x)
+    body = "\n".join(
+        body_parts
+    )
 
     r = requests.post(
         endpoint,
-        data=body.encode("utf-8"),
+        data=body.encode(
+            "utf-8"
+        ),
         headers=headers,
         timeout=20,
     )
@@ -202,25 +244,32 @@ def notify(item):
 
 
 # =========================================================
-# OFFICIAL WEBSITES
+# WEBSITE PARSER
 # =========================================================
 
-class HeadingParser(HTMLParser):
+class HeadingParser(
+    HTMLParser
+):
     def __init__(self):
         super().__init__()
+
         self.in_heading = False
         self.outer_href = None
         self.href = None
         self.parts = []
         self.items = []
 
-    def handle_starttag(self, tag, attrs):
+    def handle_starttag(
+        self,
+        tag,
+        attrs,
+    ):
         attrs = dict(attrs)
 
-        # Κρατάμε και link που "αγκαλιάζει" το heading,
-        # όπως κάνει το pao1908.com.
         if tag == "a":
-            href = attrs.get("href")
+            href = attrs.get(
+                "href"
+            )
 
             if href:
                 if self.in_heading:
@@ -228,238 +277,228 @@ class HeadingParser(HTMLParser):
                 else:
                     self.outer_href = href
 
-        if tag in ("h1", "h2", "h3", "h4"):
+        if tag in (
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+        ):
             self.in_heading = True
-            self.href = self.outer_href
+            self.href = (
+                self.outer_href
+            )
             self.parts = []
 
-    def handle_data(self, data):
+    def handle_data(
+        self,
+        data,
+    ):
         if self.in_heading:
-            self.parts.append(data)
+            self.parts.append(
+                data
+            )
 
-    def handle_endtag(self, tag):
-        if tag in ("h1", "h2", "h3", "h4") and self.in_heading:
+    def handle_endtag(
+        self,
+        tag,
+    ):
+        if (
+            tag in (
+                "h1",
+                "h2",
+                "h3",
+                "h4",
+            )
+            and self.in_heading
+        ):
             title = " ".join(
-                "".join(self.parts).split()
+                "".join(
+                    self.parts
+                ).split()
             ).strip()
 
-            if self.href and title:
+            if (
+                self.href
+                and title
+            ):
                 self.items.append(
-                    (title, self.href)
+                    (
+                        title,
+                        self.href,
+                    )
                 )
 
             self.in_heading = False
             self.href = None
             self.parts = []
 
-        elif tag == "a" and not self.in_heading:
+        elif (
+            tag == "a"
+            and not self.in_heading
+        ):
             self.outer_href = None
 
 
-def valid_article_url(full, source):
-    parsed = urlparse(full)
+def normalize_host(
+    host,
+):
+    return (
+        host
+        or ""
+    ).lower().removeprefix(
+        "www."
+    )
 
-    if parsed.netloc != source["host"]:
+
+def valid_article_url(
+    full,
+    source,
+):
+    parsed = urlparse(
+        full
+    )
+
+    if (
+        normalize_host(
+            parsed.netloc
+        )
+        != normalize_host(
+            source["host"]
+        )
+    ):
         return False
 
-    path = parsed.path.rstrip("/")
+    path = (
+        parsed.path.rstrip(
+            "/"
+        )
+    )
 
     if not path:
         return False
 
-    source_path = urlparse(
-        source["url"]
-    ).path.rstrip("/")
+    source_path = (
+        urlparse(
+            source["url"]
+        )
+        .path
+        .rstrip("/")
+    )
 
-    if path == source_path:
+    if (
+        path
+        == source_path
+    ):
         return False
 
-    # Στον Ερασιτέχνη δεχόμαστε ΜΟΝΟ
-    # πραγματικές ειδήσεις /nea/...
-    if source["key"] == "site_ao":
-        if not path.startswith("/nea/"):
-            return False
-
-    blocked = [
+    blocked = (
         "/category/",
         "/tag/",
         "/author/",
         "/page/",
         "/wp-content/",
         "/wp-admin/",
-    ]
-
-    for x in blocked:
-        if x in path:
-            return False
-
-    extensions = (
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".webp",
-        ".svg",
-        ".pdf",
-        ".css",
-        ".js",
     )
 
-    if path.lower().endswith(extensions):
+    if any(
+        x in path
+        for x in blocked
+    ):
+        return False
+
+    prefix = source.get(
+        "article_prefix"
+    )
+
+    if (
+        prefix
+        and not path.startswith(
+            prefix.rstrip("/")
+            + "/"
+        )
+    ):
+        return False
+
+    if path.lower().endswith(
+        (
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".webp",
+            ".svg",
+            ".pdf",
+            ".css",
+            ".js",
+        )
+    ):
         return False
 
     return True
 
 
-def fetch_website(source):
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 "
-            "(Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
-            "Chrome/131 Safari/537.36"
+def make_website_item(
+    source,
+    title,
+    full,
+):
+    return {
+        "id": (
+            f"{source['key']}:"
+            f"{full}"
         ),
-        "Accept-Language": "el-GR,el;q=0.9,en;q=0.8",
+        "source_key": (
+            source["key"]
+        ),
+        "org": source["org"],
+        "platform": "WEBSITE",
+        "title": title,
+        "text": "",
+        "author": "",
+        "url": full,
     }
 
-    html = None
 
-    # Πρώτη προσπάθεια: κανονικό requests.
-    try:
-        r = requests.get(
-            source["url"],
-            timeout=30,
-            headers=headers,
-        )
+# =========================================================
+# OFFICIAL WEBSITES - NORMAL FETCH
+# =========================================================
 
-        r.raise_for_status()
-        html = r.text
-
-    except Exception as exc:
-        print(
-            f"{source['key']} normal request failed: "
-            f"{exc}"
-        )
-
-        # Δεύτερη προσπάθεια:
-        # browser-like request ΑΠΕΥΘΕΙΑΣ στο ίδιο official site.
-        try:
-            r = curl_cffi.get(
-                source["url"],
-                impersonate="chrome",
-                timeout=30,
-            )
-
-            r.raise_for_status()
-            html = r.text
-
-            print(
-                f"{source['key']} curl browser fallback OK"
-            )
-
-        except Exception as fallback_exc:
-            raise RuntimeError(
-                f"normal request + browser fallback failed: "
-                f"{fallback_exc}"
-            )
-
-    parser = HeadingParser()
-    parser.feed(html)
-
-    out = []
-    used = set()
-
-    for title, href in parser.items:
-        full = urljoin(
-            source["url"],
-            href,
-        )
-
-        if not valid_article_url(
-            full,
-            source,
-        ):
-            continue
-
-        if full in used:
-            continue
-
-        used.add(full)
-
-        out.append(
-            {
-                "id": f"{source['key']}:{full}",
-                "source_key": source["key"],
-                "org": source["org"],
-                "platform": "WEBSITE",
-                "title": title,
-                "text": "",
-                "author": "",
-                "url": full,
-            }
-        )
-
-    print(
-        f"{source['key']} website results: "
-        f"{len(out)}"
-    )
-
-    return out[:50]
-async def fetch_website_browser(source):
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True
-        )
-
-        context = await browser.new_context(
-            viewport={
-                "width": 1400,
-                "height": 1000,
-            },
-            locale="el-GR",
-            user_agent=(
+def fetch_website(
+    source,
+):
+    r = requests.get(
+        source["url"],
+        timeout=30,
+        headers={
+            "User-Agent": (
                 "Mozilla/5.0 "
                 "(Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 "
                 "(KHTML, like Gecko) "
                 "Chrome/131 Safari/537.36"
             ),
-        )
+            "Accept-Language": (
+                "el-GR,el;q=0.9,"
+                "en;q=0.8"
+            ),
+        },
+    )
 
-        page = await context.new_page()
-
-        try:
-            # Πρώτα homepage για cookies/session
-            await page.goto(
-                "https://www.paobc.gr/",
-                wait_until="domcontentloaded",
-                timeout=60000,
-            )
-
-            await page.wait_for_timeout(2500)
-
-            # Μετά ΑΚΡΙΒΩΣ η επίσημη σελίδα News
-            await page.goto(
-                source["url"],
-                wait_until="domcontentloaded",
-                timeout=60000,
-            )
-
-            await page.wait_for_timeout(5000)
-
-            html = await page.content()
-
-        finally:
-            await browser.close()
+    r.raise_for_status()
 
     parser = HeadingParser()
-    parser.feed(html)
+    parser.feed(
+        r.text
+    )
 
     out = []
     used = set()
 
-    for title, href in parser.items:
+    for (
+        title,
+        href,
+    ) in parser.items:
+
         full = urljoin(
             source["url"],
             href,
@@ -474,58 +513,223 @@ async def fetch_website_browser(source):
         if full in used:
             continue
 
-        used.add(full)
+        used.add(
+            full
+        )
 
         out.append(
-            {
-                "id": f"{source['key']}:{full}",
-                "source_key": source["key"],
-                "org": source["org"],
-                "platform": "WEBSITE",
-                "title": title,
-                "text": "",
-                "author": "",
-                "url": full,
-            }
+            make_website_item(
+                source,
+                title,
+                full,
+            )
         )
 
     print(
-        f"{source['key']} Playwright website results: "
+        f"{source['key']} "
+        f"website results: "
         f"{len(out)}"
     )
 
     return out[:50]
 
+
+# =========================================================
+# OFFICIAL WEBSITE - REAL CHROMIUM FALLBACK
+# =========================================================
+
+async def fetch_website_browser(
+    source,
+):
+    async with (
+        async_playwright()
+        as p
+    ):
+        browser = (
+            await p.chromium.launch(
+                headless=True
+            )
+        )
+
+        context = (
+            await browser.new_context(
+                viewport={
+                    "width": 1400,
+                    "height": 1000,
+                },
+                locale="el-GR",
+                user_agent=(
+                    "Mozilla/5.0 "
+                    "(Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) "
+                    "Chrome/131 Safari/537.36"
+                ),
+            )
+        )
+
+        page = (
+            await context.new_page()
+        )
+
+        try:
+            if (
+                source["key"]
+                == "site_kae"
+            ):
+                await page.goto(
+                    "https://www.paobc.gr/",
+                    wait_until=(
+                        "domcontentloaded"
+                    ),
+                    timeout=60000,
+                )
+
+                await page.wait_for_timeout(
+                    2500
+                )
+
+            await page.goto(
+                source["url"],
+                wait_until=(
+                    "domcontentloaded"
+                ),
+                timeout=60000,
+            )
+
+            await page.wait_for_timeout(
+                5000
+            )
+
+            links = (
+                await page.locator(
+                    "a"
+                ).evaluate_all(
+                    """
+                    els => els.map(a => ({
+                        href: a.href || "",
+                        text: (
+                            a.innerText ||
+                            a.textContent ||
+                            a.getAttribute("aria-label") ||
+                            ""
+                        ).trim()
+                    }))
+                    """
+                )
+            )
+
+        finally:
+            await browser.close()
+
+    out = []
+    used = set()
+
+    for link in links:
+        href = (
+            link.get(
+                "href"
+            )
+            or ""
+        ).strip()
+
+        title = " ".join(
+            (
+                link.get(
+                    "text"
+                )
+                or ""
+            ).split()
+        ).strip()
+
+        if (
+            not href
+            or not title
+        ):
+            continue
+
+        full = urljoin(
+            source["url"],
+            href,
+        )
+
+        if not valid_article_url(
+            full,
+            source,
+        ):
+            continue
+
+        if full in used:
+            continue
+
+        used.add(
+            full
+        )
+
+        out.append(
+            make_website_item(
+                source,
+                title[:300],
+                full,
+            )
+        )
+
+    print(
+        f"{source['key']} "
+        f"Playwright website results: "
+        f"{len(out)}"
+    )
+
+    return out[:50]
+
+
 # =========================================================
 # OFFICIAL YOUTUBE
 # =========================================================
 
-def fetch_youtube(source):
+def fetch_youtube(
+    source,
+):
     feed = (
-        "https://www.youtube.com/feeds/videos.xml"
-        f"?channel_id={source['channel_id']}"
+        "https://www.youtube.com/"
+        "feeds/videos.xml"
+        f"?channel_id="
+        f"{source['channel_id']}"
     )
 
     r = requests.get(
         feed,
         timeout=30,
         headers={
-            "User-Agent": "Mozilla/5.0"
+            "User-Agent": (
+                "Mozilla/5.0"
+            )
         },
     )
 
     r.raise_for_status()
 
-    root = ET.fromstring(r.text)
+    root = ET.fromstring(
+        r.text
+    )
 
     ns = {
-        "a": "http://www.w3.org/2005/Atom",
-        "yt": "http://www.youtube.com/xml/schemas/2015",
+        "a": (
+            "http://www.w3.org/"
+            "2005/Atom"
+        ),
+        "yt": (
+            "http://www.youtube.com/"
+            "xml/schemas/2015"
+        ),
     }
 
     out = []
 
-    for entry in root.findall("a:entry", ns):
+    for entry in root.findall(
+        "a:entry",
+        ns,
+    ):
         video_id = (
             entry.findtext(
                 "yt:videoId",
@@ -557,8 +761,9 @@ def fetch_youtube(source):
             continue
 
         url = (
-            "https://www.youtube.com/watch"
-            f"?v={video_id}"
+            "https://www.youtube.com/"
+            "watch?v="
+            f"{video_id}"
         )
 
         out.append(
@@ -567,9 +772,15 @@ def fetch_youtube(source):
                     f"{source['key']}:"
                     f"{video_id}"
                 ),
-                "source_key": source["key"],
-                "org": source["org"],
-                "platform": "YOUTUBE",
+                "source_key": (
+                    source["key"]
+                ),
+                "org": (
+                    source["org"]
+                ),
+                "platform": (
+                    "YOUTUBE"
+                ),
                 "title": title,
                 "text": "",
                 "author": channel,
@@ -578,7 +789,8 @@ def fetch_youtube(source):
         )
 
     print(
-        f"{source['key']} YouTube results: "
+        f"{source['key']} "
+        f"YouTube results: "
         f"{len(out)}"
     )
 
@@ -586,13 +798,18 @@ def fetch_youtube(source):
 
 
 # =========================================================
-# OFFICIAL X ACCOUNTS
+# OFFICIAL X
 # =========================================================
 
 async def fetch_x_sources():
-    db = "/tmp/twscrape_official.db"
+    db = (
+        "/tmp/"
+        "twscrape_official.db"
+    )
 
-    Path(db).unlink(missing_ok=True)
+    Path(db).unlink(
+        missing_ok=True
+    )
 
     api = API(
         db,
@@ -601,25 +818,28 @@ async def fetch_x_sources():
         wait_interval=1,
     )
 
-    cookie_header = (
-        f"auth_token={X_AUTH_TOKEN}; "
-        f"ct0={X_CT0}"
-    )
-
-    await api.pool.add_account_cookies(
-        "official-pao",
-        cookie_header,
+    await (
+        api.pool
+        .add_account_cookies(
+            "official-pao",
+            (
+                f"auth_token="
+                f"{X_AUTH_TOKEN}; "
+                f"ct0={X_CT0}"
+            ),
+        )
     )
 
     results_by_source = {}
 
     for source in X_SOURCES:
-        query = f"from:{source['username']}"
-
         try:
             results = await gather(
                 api.search(
-                    query,
+                    (
+                        f"from:"
+                        f"{source['username']}"
+                    ),
                     limit=20,
                 )
             )
@@ -629,20 +849,30 @@ async def fetch_x_sources():
             for tweet in results:
                 username = (
                     getattr(
-                        getattr(tweet, "user", None),
+                        getattr(
+                            tweet,
+                            "user",
+                            None,
+                        ),
                         "username",
                         "",
                     )
-                    or source["username"]
+                    or source[
+                        "username"
+                    ]
                 )
 
                 if (
                     username.lower()
-                    != source["username"].lower()
+                    != source[
+                        "username"
+                    ].lower()
                 ):
                     continue
 
-                tweet_id = str(tweet.id)
+                tweet_id = str(
+                    tweet.id
+                )
 
                 text = (
                     getattr(
@@ -654,8 +884,9 @@ async def fetch_x_sources():
                 ).strip()
 
                 url = (
-                    f"https://x.com/"
-                    f"{username}/status/"
+                    "https://x.com/"
+                    f"{username}/"
+                    "status/"
                     f"{tweet_id}"
                 )
 
@@ -665,12 +896,18 @@ async def fetch_x_sources():
                             f"{source['key']}:"
                             f"{tweet_id}"
                         ),
-                        "source_key": source["key"],
-                        "org": source["org"],
+                        "source_key": (
+                            source["key"]
+                        ),
+                        "org": (
+                            source["org"]
+                        ),
                         "platform": "X",
                         "title": "",
                         "text": text,
-                        "author": f"@{username}",
+                        "author": (
+                            f"@{username}"
+                        ),
                         "url": url,
                     }
                 )
@@ -680,13 +917,15 @@ async def fetch_x_sources():
             ] = out
 
             print(
-                f"{source['key']} X results: "
+                f"{source['key']} "
+                f"X results: "
                 f"{len(out)}"
             )
 
         except Exception as exc:
             print(
-                f"{source['key']} X error: "
+                f"{source['key']} "
+                f"X error: "
                 f"{exc}"
             )
 
@@ -694,13 +933,20 @@ async def fetch_x_sources():
 
 
 # =========================================================
-# INSTAGRAM / FACEBOOK
+# INSTAGRAM / FACEBOOK URL NORMALIZATION
 # =========================================================
 
-def canonical_instagram_url(href):
-    parsed = urlparse(href)
+def canonical_instagram_url(
+    href,
+):
+    parsed = urlparse(
+        href
+    )
 
-    if "instagram.com" not in parsed.netloc:
+    if (
+        "instagram.com"
+        not in parsed.netloc
+    ):
         return None
 
     match = re.search(
@@ -713,15 +959,24 @@ def canonical_instagram_url(href):
 
     return (
         "https://www.instagram.com"
-        + match.group(0).rstrip("/")
+        + match.group(0).rstrip(
+            "/"
+        )
         + "/"
     )
 
 
-def canonical_facebook_url(href):
-    parsed = urlparse(href)
+def canonical_facebook_url(
+    href,
+):
+    parsed = urlparse(
+        href
+    )
 
-    if "facebook.com" not in parsed.netloc:
+    if (
+        "facebook.com"
+        not in parsed.netloc
+    ):
         return None
 
     path = parsed.path
@@ -739,84 +994,116 @@ def canonical_facebook_url(href):
             + path.rstrip("/")
         )
 
-    qs = parse_qs(parsed.query)
+    qs = parse_qs(
+        parsed.query
+    )
 
     if (
         "/photo" in path
-        and qs.get("fbid")
+        and qs.get(
+            "fbid"
+        )
     ):
         return (
-            "https://www.facebook.com/photo/"
-            f"?fbid={qs['fbid'][0]}"
+            "https://www.facebook.com/"
+            "photo/?fbid="
+            f"{qs['fbid'][0]}"
         )
 
     if (
-        "permalink.php" in path
-        and qs.get("story_fbid")
+        "permalink.php"
+        in path
+        and qs.get(
+            "story_fbid"
+        )
     ):
         url = (
             "https://www.facebook.com/"
             "permalink.php?"
-            f"story_fbid={qs['story_fbid'][0]}"
+            "story_fbid="
+            f"{qs['story_fbid'][0]}"
         )
 
         if qs.get("id"):
-            url += f"&id={qs['id'][0]}"
+            url += (
+                f"&id="
+                f"{qs['id'][0]}"
+            )
 
         return url
 
     return None
 
 
+# =========================================================
+# OFFICIAL INSTAGRAM + FACEBOOK
+# =========================================================
+
 async def fetch_browser_sources():
     results_by_source = {}
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True
+    async with (
+        async_playwright()
+        as p
+    ):
+        browser = (
+            await p.chromium.launch(
+                headless=True
+            )
         )
 
-        context = await browser.new_context(
-            viewport={
-                "width": 1400,
-                "height": 1000,
-            },
-            locale="en-US",
-            user_agent=(
-                "Mozilla/5.0 "
-                "(Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 "
-                "(KHTML, like Gecko) "
-                "Chrome/131 Safari/537.36"
-            ),
+        context = (
+            await browser.new_context(
+                viewport={
+                    "width": 1400,
+                    "height": 1000,
+                },
+                locale="en-US",
+                user_agent=(
+                    "Mozilla/5.0 "
+                    "(Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) "
+                    "Chrome/131 Safari/537.36"
+                ),
+            )
         )
 
-        for source in BROWSER_SOURCES:
-            page = await context.new_page()
+        for source in (
+            BROWSER_SOURCES
+        ):
+            page = (
+                await context.new_page()
+            )
 
             try:
                 await page.goto(
                     source["url"],
-                    wait_until="domcontentloaded",
+                    wait_until=(
+                        "domcontentloaded"
+                    ),
                     timeout=60000,
                 )
 
-                await page.wait_for_timeout(5000)
+                await page.wait_for_timeout(
+                    5000
+                )
 
-                links = await page.locator(
-                    "a"
-                ).evaluate_all(
-                    """
-                    els => els.map(a => ({
-                        href: a.href || "",
-                        text:
-                          (
-                            a.innerText ||
-                            a.getAttribute("aria-label") ||
-                            ""
-                          ).trim()
-                    }))
-                    """
+                links = (
+                    await page.locator(
+                        "a"
+                    ).evaluate_all(
+                        """
+                        els => els.map(a => ({
+                            href: a.href || "",
+                            text: (
+                                a.innerText ||
+                                a.getAttribute("aria-label") ||
+                                ""
+                            ).trim()
+                        }))
+                        """
+                    )
                 )
 
                 out = []
@@ -824,7 +1111,9 @@ async def fetch_browser_sources():
 
                 for link in links:
                     href = (
-                        link.get("href")
+                        link.get(
+                            "href"
+                        )
                         or ""
                     ).strip()
 
@@ -832,7 +1121,9 @@ async def fetch_browser_sources():
                         continue
 
                     if (
-                        source["platform"]
+                        source[
+                            "platform"
+                        ]
                         == "INSTAGRAM"
                     ):
                         canonical = (
@@ -840,6 +1131,7 @@ async def fetch_browser_sources():
                                 href
                             )
                         )
+
                     else:
                         canonical = (
                             canonical_facebook_url(
@@ -853,17 +1145,22 @@ async def fetch_browser_sources():
                     if canonical in used:
                         continue
 
-                    used.add(canonical)
+                    used.add(
+                        canonical
+                    )
 
                     text = (
-                        link.get("text")
+                        link.get(
+                            "text"
+                        )
                         or ""
                     ).strip()
 
                     if not text:
                         text = (
                             "New official "
-                            f"{source['platform']} post"
+                            f"{source['platform']} "
+                            "post"
                         )
 
                     out.append(
@@ -875,14 +1172,22 @@ async def fetch_browser_sources():
                             "source_key": (
                                 source["key"]
                             ),
-                            "org": source["org"],
-                            "platform": (
-                                source["platform"]
+                            "org": (
+                                source["org"]
                             ),
-                            "title": text[:300],
+                            "platform": (
+                                source[
+                                    "platform"
+                                ]
+                            ),
+                            "title": (
+                                text[:300]
+                            ),
                             "text": "",
                             "author": "",
-                            "url": canonical,
+                            "url": (
+                                canonical
+                            ),
                         }
                     )
 
@@ -892,14 +1197,16 @@ async def fetch_browser_sources():
 
                 print(
                     f"{source['key']} "
-                    f"{source['platform']} results: "
+                    f"{source['platform']} "
+                    f"results: "
                     f"{len(out[:30])}"
                 )
 
             except Exception as exc:
                 print(
                     f"{source['key']} "
-                    f"{source['platform']} error: "
+                    f"{source['platform']} "
+                    f"error: "
                     f"{exc}"
                 )
 
@@ -912,7 +1219,7 @@ async def fetch_browser_sources():
 
 
 # =========================================================
-# PROCESS ONE APPROVED SOURCE
+# PROCESS / BASELINE / DEDUP
 # =========================================================
 
 def process_source(
@@ -923,14 +1230,17 @@ def process_source(
 ):
     if not items:
         print(
-            f"{source_key}: no usable items; "
+            f"{source_key}: "
+            "no usable items; "
             "not initializing."
         )
+
         return
 
-    # Πρώτη επιτυχημένη εκτέλεση κάθε πηγής:
-    # baseline μόνο, χωρίς spam παλιών posts.
-    if source_key not in initialized_sources:
+    if (
+        source_key
+        not in initialized_sources
+    ):
         seen.update(
             item["id"]
             for item in items
@@ -941,7 +1251,8 @@ def process_source(
         )
 
         print(
-            f"{source_key}: baseline saved "
+            f"{source_key}: "
+            "baseline saved "
             f"({len(items)} items)"
         )
 
@@ -950,14 +1261,16 @@ def process_source(
     fresh = [
         item
         for item in items
-        if item["id"] not in seen
+        if item["id"]
+        not in seen
     ]
 
-    # Οι περισσότερες σελίδες εμφανίζουν
-    # τα νεότερα πρώτα.
-    # reversed = αποστολή παλαιότερου fresh πρώτα.
-    for item in reversed(fresh):
-        notify(item)
+    for item in reversed(
+        fresh
+    ):
+        notify(
+            item
+        )
 
         seen.add(
             item["id"]
@@ -990,146 +1303,182 @@ async def main():
     seen = state["ids"]
 
     initialized_sources = (
-        state["initialized_sources"]
+        state[
+            "initialized_sources"
+        ]
     )
 
-    # Αν αλλάξει εντελώς η έκδοση,
-    # κρατάμε τα IDs αλλά κάνουμε baseline
-    # ανά νέα/αλλαγμένη πηγή.
-    if state["engine"] != ENGINE:
+    if (
+        state["engine"]
+        != ENGINE
+    ):
         initialized_sources = set()
 
     results_by_source = {}
 
-    # -----------------------------------------
-    # 1. Official websites
-    # -----------------------------------------
 
-    for source in WEBSITE_SOURCES:
+    # =====================================================
+    # 1. OFFICIAL WEBSITES
+    # =====================================================
+
+    for source in (
+        WEBSITE_SOURCES
+    ):
         try:
             try:
-            results_by_source[
-                source["key"]
-            ] = fetch_website(source)
-
-        except Exception as first_exc:
-            print(
-                f"{source['key']} normal fetch failed: "
-                f"{first_exc}"
-            )
-
-            if source["key"] == "site_kae":
-                print(
-                    "site_kae: trying real Chromium..."
-                )
-
                 results_by_source[
                     source["key"]
-                ] = await fetch_website_browser(
+                ] = fetch_website(
                     source
                 )
-            else:
-                raise
 
-        except Exception as exc:
-        print(
-            f"{source['key']} website error: "
-            f"{exc}"
-        )
+            except Exception as first_exc:
+                print(
+                    f"{source['key']} "
+                    "normal fetch failed: "
+                    f"{first_exc}"
+                )
 
-    # -----------------------------------------
-    # 2. Official YouTube
-    # -----------------------------------------
+                if (
+                    source["key"]
+                    == "site_kae"
+                ):
+                    print(
+                        "site_kae: "
+                        "trying real Chromium..."
+                    )
 
-    for source in YOUTUBE_SOURCES:
-        try:
-            results_by_source[
-                source["key"]
-            ] = fetch_youtube(source)
+                    results_by_source[
+                        source["key"]
+                    ] = (
+                        await fetch_website_browser(
+                            source
+                        )
+                    )
+
+                else:
+                    raise
 
         except Exception as exc:
             print(
-                f"{source['key']} YouTube error: "
+                f"{source['key']} "
+                "website error: "
                 f"{exc}"
             )
 
-    # -----------------------------------------
-    # 3. Official X
-    # -----------------------------------------
+
+    # =====================================================
+    # 2. OFFICIAL YOUTUBE
+    # =====================================================
+
+    for source in (
+        YOUTUBE_SOURCES
+    ):
+        try:
+            results_by_source[
+                source["key"]
+            ] = fetch_youtube(
+                source
+            )
+
+        except Exception as exc:
+            print(
+                f"{source['key']} "
+                "YouTube error: "
+                f"{exc}"
+            )
+
+
+    # =====================================================
+    # 3. OFFICIAL X
+    # =====================================================
 
     try:
-        x_results = await fetch_x_sources()
-
         results_by_source.update(
-            x_results
+            await fetch_x_sources()
         )
 
     except Exception as exc:
         print(
-            f"Official X global error: "
+            "Official X global error: "
             f"{exc}"
         )
 
-    # -----------------------------------------
-    # 4. Official Instagram + Facebook
-    # -----------------------------------------
+
+    # =====================================================
+    # 4. OFFICIAL INSTAGRAM + FACEBOOK
+    # =====================================================
 
     try:
-        browser_results = (
+        results_by_source.update(
             await fetch_browser_sources()
         )
 
-        results_by_source.update(
-            browser_results
-        )
-
     except Exception as exc:
         print(
-            f"Official social browser error: "
+            "Official social browser error: "
             f"{exc}"
         )
 
-    # -----------------------------------------
-    # Process ONLY approved sources
-    # -----------------------------------------
+
+    # =====================================================
+    # PROCESS ONLY APPROVED SOURCES
+    # =====================================================
 
     approved_keys = {
         x["key"]
-        for x in WEBSITE_SOURCES
-        + YOUTUBE_SOURCES
-        + X_SOURCES
-        + BROWSER_SOURCES
+        for x in (
+            WEBSITE_SOURCES
+            + YOUTUBE_SOURCES
+            + X_SOURCES
+            + BROWSER_SOURCES
+        )
     }
 
     for source_key in sorted(
         approved_keys
     ):
-        items = results_by_source.get(
-            source_key,
-            [],
-        )
-
         process_source(
             source_key,
-            items,
+            results_by_source.get(
+                source_key,
+                [],
+            ),
             seen,
             initialized_sources,
         )
+
+
+    # =====================================================
+    # SAVE STATE
+    # =====================================================
 
     save_state(
         seen,
         initialized_sources,
     )
 
-    print("")
-    print("OFFICIAL PAO CHECK COMPLETE")
+    print()
+
     print(
-        "Initialized approved sources:",
-        len(initialized_sources),
+        "OFFICIAL PAO "
+        "CHECK COMPLETE"
+    )
+
+    print(
+        "Initialized "
+        "approved sources:",
+        len(
+            initialized_sources
+        ),
         "/",
-        len(approved_keys),
+        len(
+            approved_keys
+        ),
     )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(
+        main()
+    )
