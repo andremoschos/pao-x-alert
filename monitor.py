@@ -10,7 +10,12 @@ from twscrape import API, gather
 STATE = Path("seen.json")
 ENGINE = "twscrape_v2"
 MAX_SEEN = 2000
-QUERY = "panathinaikos"
+QUERY = (
+    'panathinaikos OR '
+    '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
+    '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
+    'paobc OR fmeetsdata'
+)
 
 AUTH = os.environ["X_AUTH_TOKEN"]
 CT0 = os.environ["X_CT0"]
@@ -74,7 +79,7 @@ async def fetch_latest():
     cookie_header = f"auth_token={AUTH}; ct0={CT0}"
     await api.pool.add_account_cookies("newspao", cookie_header)
 
-    results = await gather(api.search(QUERY, limit=60))
+    results = await gather(api.search(QUERY, limit=100))
 
     tweets = []
     seen_now = set()
@@ -119,7 +124,7 @@ async def main():
         return
 
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(minutes=20)
+    cutoff = now - timedelta(minutes=45)
 
     fresh = [
         t for t in tweets
