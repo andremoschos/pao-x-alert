@@ -1006,16 +1006,36 @@ async def main():
     # -----------------------------------------
 
     for source in WEBSITE_SOURCES:
+    try:
         try:
             results_by_source[
                 source["key"]
             ] = fetch_website(source)
 
-        except Exception as exc:
+        except Exception as first_exc:
             print(
-                f"{source['key']} website error: "
-                f"{exc}"
+                f"{source['key']} normal fetch failed: "
+                f"{first_exc}"
             )
+
+            if source["key"] == "site_kae":
+                print(
+                    "site_kae: trying real Chromium..."
+                )
+
+                results_by_source[
+                    source["key"]
+                ] = await fetch_website_browser(
+                    source
+                )
+            else:
+                raise
+
+    except Exception as exc:
+        print(
+            f"{source['key']} website error: "
+            f"{exc}"
+        )
 
     # -----------------------------------------
     # 2. Official YouTube
