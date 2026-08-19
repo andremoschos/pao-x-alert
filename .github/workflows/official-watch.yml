@@ -31,6 +31,13 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
+      - name: Check Official KAE X direct
+        env:
+          NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
+          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+          X_CT0: ${{ secrets.X_CT0 }}
+        run: python official_kae_x_monitor.py
+
       - name: Check Official PAO
         env:
           NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
@@ -52,5 +59,16 @@ jobs:
           fi
 
           git commit -m "Update Official PAO seen items"
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          for attempt in 1 2 3 4 5; do
+            echo "Push attempt $attempt"
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Remote changed during push; retrying..."
+            sleep 2
+          done
+
+          echo "Failed to push Official PAO state after retries"
+          exit 1
