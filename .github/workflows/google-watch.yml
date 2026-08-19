@@ -2,6 +2,10 @@ name: Google News + Web Watch
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/google-watch.yml"
+      - "google_monitor.py"
   schedule:
     - cron: "1-59/5 * * * *"
 
@@ -49,5 +53,21 @@ jobs:
           fi
 
           git commit -m "Update Google seen items"
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          for attempt in 1 2 3 4 5; do
+            echo "Push attempt $attempt"
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              echo "Rebase failed; retrying..."
+              sleep 2
+              continue
+            fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Remote changed during push; retrying..."
+            sleep 2
+          done
+
+          echo "Failed to push Google state after retries"
+          exit 1
