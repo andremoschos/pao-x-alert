@@ -1,0 +1,74 @@
+name: Official PAO Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "2-59/5 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: official-pao-watch
+  cancel-in-progress: false
+
+jobs:
+  official-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Check Official KAE X direct
+        env:
+          NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
+          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+          X_CT0: ${{ secrets.X_CT0 }}
+        run: python official_kae_x_monitor.py
+
+      - name: Check Official PAO
+        env:
+          NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
+          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+          X_CT0: ${{ secrets.X_CT0 }}
+        run: python official_monitor.py
+
+      - name: Save Official seen items
+        if: success()
+        run: |
+          git config user.name "pao-x-alert"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add official_seen.json
+
+          if git diff --cached --quiet; then
+            echo "No Official state changes"
+            exit 0
+          fi
+
+          git commit -m "Update Official PAO seen items"
+
+          for attempt in 1 2 3 4 5; do
+            echo "Push attempt $attempt"
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Remote changed during push; retrying..."
+            sleep 2
+          done
+
+          echo "Failed to push Official PAO state after retries"
+          exit 1
