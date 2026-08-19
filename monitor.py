@@ -11,7 +11,6 @@ STATE = Path("seen.json")
 ENGINE = "twscrape_v3_full_terms"
 MAX_SEEN = 2000
 QUERY = (
-    'panathinaikos OR '
     '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
     '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
     'from:paobc OR from:fmeetsdata'
