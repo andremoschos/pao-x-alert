@@ -1,0 +1,39 @@
+name: X Panathinaikos Realtime Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Refresh the long-running watcher every hour.
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x-panathinaikos-realtime-watch
+  cancel-in-progress: true
+
+jobs:
+  x-panathinaikos-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 175
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install X dependencies
+        run: |
+          pip install requests "twscrape[curl]"
+
+      - name: Run Panathinaikos realtime watcher
+        env:
+          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+          X_CT0: ${{ secrets.X_CT0 }}
+          NTFY_PANATHINAIKOS_TOPIC: ${{ secrets.NTFY_PANATHINAIKOS_TOPIC }}
+        run: python panathinaikos_realtime_monitor.py
