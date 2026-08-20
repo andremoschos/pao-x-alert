@@ -1,0 +1,20 @@
+name: Kick PAO Fast Watch
+
+on:
+  push:
+    paths:
+      - ".github/workflows/kick-fast-watch.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  kick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start fast watcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run fast-2min-watch.yml --ref main
