@@ -1,11 +1,14 @@
 import os
+import re
 import json
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import requests
 from twscrape import API, gather
+from playwright.async_api import async_playwright
 
 
 STATE = Path("official_seen.json")
@@ -34,6 +37,18 @@ X_SOURCES = [
         "username": "acpanathinaikos",
     },
 ]
+
+
+@dataclass
+class SimpleUser:
+    username: str
+
+
+@dataclass
+class SimpleTweet:
+    id: int
+    rawContent: str
+    user: SimpleUser
 
 
 def load_state():
@@ -94,7 +109,7 @@ def notify(source, tweet):
     r.raise_for_status()
 
 
-async def fetch_source(api, source):
+async def fetch_source_twscrape(api, source):
     user = await api.user_by_login(source["username"])
     if not user:
         raise RuntimeError(
@@ -123,7 +138,129 @@ async def fetch_source(api, source):
 
         out.append(tweet)
 
+    if not out:
+        raise RuntimeError(
+            f"twscrape returned 0 own posts for @{source['username']}"
+        )
+
     return out
+
+
+async def fetch_source_browser(source):
+    """Direct authenticated X profile fallback when GraphQL/twscrape is rate-limited."""
+    username = source["username"]
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox"],
+        )
+
+        context = await browser.new_context(
+            viewport={"width": 1400, "height": 1100},
+            locale="en-US",
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/131 Safari/537.36"
+            ),
+        )
+
+        await context.add_cookies(
+            [
+                {
+                    "name": "auth_token",
+                    "value": X_AUTH_TOKEN,
+                    "domain": ".x.com",
+                    "path": "/",
+                    "secure": True,
+                    "httpOnly": True,
+                },
+                {
+                    "name": "ct0",
+                    "value": X_CT0,
+                    "domain": ".x.com",
+                    "path": "/",
+                    "secure": True,
+                },
+            ]
+        )
+
+        page = await context.new_page()
+
+        try:
+            await page.goto(
+                f"https://x.com/{username}",
+                wait_until="domcontentloaded",
+                timeout=45000,
+            )
+            await page.wait_for_timeout(5500)
+
+            articles = page.locator("article")
+            count = min(await articles.count(), 25)
+            found = {}
+
+            for i in range(count):
+                article = articles.nth(i)
+
+                try:
+                    text = " ".join(
+                        (await article.inner_text(timeout=3000)).split()
+                    ).strip()
+                except Exception:
+                    text = ""
+
+                links = article.locator('a[href*="/status/"]')
+                link_count = min(await links.count(), 20)
+
+                for j in range(link_count):
+                    href = (await links.nth(j).get_attribute("href") or "").strip()
+                    m = re.search(
+                        rf"/{re.escape(username)}/status/(\d+)",
+                        href,
+                        flags=re.I,
+                    )
+                    if not m:
+                        continue
+
+                    tweet_id = m.group(1)
+                    found[tweet_id] = SimpleTweet(
+                        id=int(tweet_id),
+                        rawContent=text,
+                        user=SimpleUser(username=username),
+                    )
+                    break
+
+            out = sorted(
+                found.values(),
+                key=lambda tweet: int(tweet.id),
+                reverse=True,
+            )
+
+            if not out:
+                raise RuntimeError(
+                    f"browser returned 0 own status posts for @{username}"
+                )
+
+            print(
+                f"{source['key']} X browser fallback: {len(out)} posts",
+                flush=True,
+            )
+            return out
+
+        finally:
+            await browser.close()
+
+
+async def fetch_source(api, source):
+    try:
+        return await fetch_source_twscrape(api, source)
+    except Exception as exc:
+        print(
+            f"{source['key']} twscrape failed: {exc}; trying Chromium profile fallback",
+            flush=True,
+        )
+        return await fetch_source_browser(source)
 
 
 async def main():
@@ -136,7 +273,7 @@ async def main():
     api = API(
         db,
         raise_when_no_account=True,
-        wait_timeout=30,
+        wait_timeout=12,
         wait_interval=1,
     )
 
@@ -155,54 +292,63 @@ async def main():
         try:
             tweets = await fetch_source(api, source)
 
-            fetched_ids = []
+            older_or_already_seen = []
             fresh_recent = []
 
             for tweet in tweets:
                 tweet_id = str(tweet.id)
                 item_id = f"{source['key']}:{tweet_id}"
-                fetched_ids.append(item_id)
 
                 if item_id in seen:
+                    older_or_already_seen.append(item_id)
                     continue
 
                 if snowflake_datetime(tweet_id) >= cutoff:
                     fresh_recent.append(tweet)
+                else:
+                    # Old unseen items are safe to baseline silently.
+                    older_or_already_seen.append(item_id)
 
-            # Baseline older unseen items silently so the first run
-            # cannot flood ntfy with old posts.
-            seen.update(fetched_ids)
+            seen.update(older_or_already_seen)
 
             for tweet in sorted(
                 fresh_recent,
                 key=lambda t: int(t.id),
             ):
+                item_id = f"{source['key']}:{tweet.id}"
+
+                # IMPORTANT: mark seen only AFTER ntfy confirms delivery.
                 notify(source, tweet)
+                seen.add(item_id)
                 total_sent += 1
 
                 print(
                     "OFFICIAL X DIRECT SENT:",
                     source["org"],
                     f"https://x.com/{source['username']}/status/{tweet.id}",
+                    flush=True,
                 )
 
             print(
                 f"{source['key']} direct: {len(tweets)} fetched, "
-                f"{len(fresh_recent)} recent unseen sent"
+                f"{len(fresh_recent)} recent unseen sent",
+                flush=True,
             )
 
         except Exception as exc:
-            # One account failing must not kill the whole Official watcher.
-            # official_monitor.py still keeps the normal X Search as fallback.
+            # One account failing must not kill the other official accounts.
+            # Crucially, failed fresh posts are NOT added to seen and can retry.
             print(
-                f"{source['key']} direct error: {exc}"
+                f"{source['key']} direct error: {exc}",
+                flush=True,
             )
 
     state["ids"] = sorted(seen)
     save_state(state)
 
     print(
-        f"Official X direct complete: {total_sent} notifications sent"
+        f"Official X direct complete: {total_sent} notifications sent",
+        flush=True,
     )
 
 
