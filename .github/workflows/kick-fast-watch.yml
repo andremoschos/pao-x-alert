@@ -18,3 +18,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run fast-2min-watch.yml --repo andremoschos/pao-x-alert --ref main
+
+# Restart marker: Official PAO routing/X fallback fix 2026-08-20
