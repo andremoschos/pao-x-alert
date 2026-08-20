@@ -20,26 +20,14 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           p = Path('.github/workflows/fast-2min-watch.yml')
           s = p.read_text(encoding='utf-8')
-
-          old = '''  gh api \\
-    --method PUT \\
-    "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable"
-'''
-
-          new = '''  gh api \\
-    --method PUT \\
-    "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable" \\
-    || true
-'''
-
-          if new in s:
+          needle = '              "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable"\n          done'
+          replacement = '              "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable" \\\n              || true\n          done'
+          if replacement in s:
               print('Fast cutover already repaired.')
-          elif old in s:
-              s = s.replace(old, new, 1)
-              p.write_text(s, encoding='utf-8')
+          elif needle in s:
+              p.write_text(s.replace(needle, replacement, 1), encoding='utf-8')
               print('Fast cutover repaired.')
           else:
               raise SystemExit('Expected disable block not found; refusing unsafe edit.')
