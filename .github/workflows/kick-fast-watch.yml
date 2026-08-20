@@ -14,9 +14,17 @@ jobs:
   kick:
     runs-on: ubuntu-latest
     steps:
-      - name: Run fast cutover repair
+      - name: Prepare legacy workflows for safe cutover
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run repair-fast-cutover.yml --repo andremoschos/pao-x-alert --ref main
+        run: |
+          for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" || true
+          done
 
-# Temporary repair kick 2026-08-20 21:49 GR
+      - name: Start fast watcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run fast-2min-watch.yml --repo andremoschos/pao-x-alert --ref main
+
+# Robust restart: enable legacy workflows before fast cutover.
