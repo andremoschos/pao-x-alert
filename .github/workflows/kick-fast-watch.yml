@@ -14,18 +14,9 @@ jobs:
   kick:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Official ntfy route
-        run: |
-          curl -fsS \
-            -H "Title: OFFICIAL PAO - ROUTE TEST" \
-            -H "Priority: high" \
-            -H "Tags: green_circle" \
-            -d "Official PAO ntfy route is connected. The 2-minute watcher is restarting now." \
-            https://ntfy.sh/newspao-official-pao-847291
-
-      - name: Start fast watcher
+      - name: Run fast cutover repair
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run fast-2min-watch.yml --repo andremoschos/pao-x-alert --ref main
+        run: gh workflow run repair-fast-cutover.yml --repo andremoschos/pao-x-alert --ref main
 
-# Restart marker: Official PAO route + X browser fallback 2026-08-20 20:26 GR
+# Temporary repair kick 2026-08-20 21:49 GR
