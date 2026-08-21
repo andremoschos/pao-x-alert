@@ -32,6 +32,44 @@ ALERT_RSS = os.environ["GOOGLE_ALERT_RSS"]
 TOPIC = os.environ["NTFY_GOOGLE_TOPIC"]
 
 
+# These are the exact website domains already monitored DIRECTLY by the
+# Telegram PAO news watcher. Google News + Web must not repeat those sources.
+# Filtering is DOMAIN-BASED only; we do not guess from similar titles/names.
+DIRECT_TELEGRAM_DOMAINS = {
+    "monobala.gr",
+    "sport-fm.gr",
+    "sportal.gr",
+    "gazzetta.gr",
+    "sport24.gr",
+    "athletiko.gr",
+    "sdna.gr",
+    "tanea.gr",
+    "in.gr",
+    "to10.gr",
+    "pickandroll.gr",
+    "sportdog.gr",
+    "onsports.gr",
+    "eurohoops.net",
+    "panathinaikos24.gr",
+    "novasports.gr",
+    "transferfeed.com",
+    "filathlos.gr",
+    "regista.gr",
+    "agrinio24.gr",
+    "astratv.gr",
+    "paopantou.gr",
+    "ole.gr",
+    "trifilara.gr",
+    "olaprasina1908.gr",
+    "pao.gr",
+    "paobc.gr",
+    "euroleaguebasketball.net",
+    "contra.gr",
+    "basketnews.com",
+    "beinsports.com",
+}
+
+
 TERMS = [
     "panathinaikos",
     "Panathinaïkos",
@@ -132,6 +170,49 @@ def unwrap_google_url(url):
     return url
 
 
+def canonical_host(url):
+    """Return a lowercase registrable-looking host for exact domain matching."""
+    if not url:
+        return ""
+    try:
+        value = unwrap_google_url(url)
+        host = (urlparse(value).hostname or "").lower().strip(".")
+        if host.startswith("www."):
+            host = host[4:]
+        return host
+    except Exception:
+        return ""
+
+
+def host_matches_direct_domain(host):
+    if not host:
+        return False
+    return any(
+        host == domain or host.endswith("." + domain)
+        for domain in DIRECT_TELEGRAM_DOMAINS
+    )
+
+
+def direct_source_domain(entry):
+    """
+    Return the blocked direct domain if this Google result is already covered
+    by Telegram. Prefer Google News <source url=...>, then the actual Web URL.
+    If neither exposes a reliable domain, keep the result rather than guessing.
+    """
+    candidates = [
+        entry.get("publisher_url", ""),
+        entry.get("url", "") if entry.get("source") == "WEB" else "",
+    ]
+
+    for candidate in candidates:
+        host = canonical_host(candidate)
+        if host_matches_direct_domain(host):
+            for domain in DIRECT_TELEGRAM_DOMAINS:
+                if host == domain or host.endswith("." + domain):
+                    return domain
+    return ""
+
+
 def canonical_title(title):
     value = clean_text(title).lower()
     value = re.sub(r"\s+-\s+[^-]{1,100}$", "", value)
@@ -194,6 +275,7 @@ def parse_google_alert_atom(xml_text):
                 "url": url,
                 "source": "WEB",
                 "publisher": "",
+                "publisher_url": "",
                 "edition": "Google Alerts / Web",
                 "published": updated,
                 "published_dt": parse_published(updated),
@@ -242,7 +324,14 @@ def fetch_google_news_edition(country, hl, lang):
         link = (item.findtext("link") or "").strip()
         guid = (item.findtext("guid") or "").strip()
         pubdate = (item.findtext("pubDate") or "").strip()
-        publisher = clean_text(item.findtext("source") or "")
+
+        source_el = item.find("source")
+        publisher = clean_text(source_el.text if source_el is not None else "")
+        publisher_url = (
+            (source_el.get("url", "") or "").strip()
+            if source_el is not None
+            else ""
+        )
 
         entries.append(
             {
@@ -251,6 +340,7 @@ def fetch_google_news_edition(country, hl, lang):
                 "url": link,
                 "source": "NEWS",
                 "publisher": publisher,
+                "publisher_url": publisher_url,
                 "edition": country,
                 "published": pubdate,
                 "published_dt": parse_published(pubdate),
@@ -357,17 +447,44 @@ def main():
     )
     print(f"Combined unique Google results: {len(merged)}")
 
-    entries = list(merged.values())
-    if not entries:
+    all_entries = list(merged.values())
+    if not all_entries:
         print("No Google results right now.")
         return
+
+    # Remove only sources whose exact domain is already monitored directly in
+    # Telegram. Suppressed IDs are saved as seen, so they can never backlog and
+    # suddenly flood ntfy after a later restart.
+    suppressed_direct = []
+    entries = []
+
+    for entry in all_entries:
+        blocked_domain = direct_source_domain(entry)
+        if blocked_domain:
+            suppressed_direct.append((entry, blocked_domain))
+        else:
+            entries.append(entry)
+
+    if suppressed_direct:
+        seen.update(entry["id"] for entry, _domain in suppressed_direct)
+        examples = ", ".join(
+            f"{domain}:{entry.get('publisher') or entry.get('title', '')[:35]}"
+            for entry, domain in suppressed_direct[:8]
+        )
+        print(
+            f"Direct-Telegram sources suppressed from Google: "
+            f"{len(suppressed_direct)} | {examples}"
+        )
 
     # v3 intentionally baselines once so deployment of the anti-flood fix
     # cannot replay whatever Google currently exposes.
     if state["engine"] != ENGINE:
         seen.update(entry["id"] for entry in entries)
         save_state(seen)
-        print(f"RATE-SAFE Google baseline saved: {len(entries)} entries")
+        print(
+            f"RATE-SAFE Google baseline saved: {len(entries)} kept, "
+            f"{len(suppressed_direct)} direct-suppressed"
+        )
         return
 
     unseen = [entry for entry in entries if entry["id"] not in seen]
@@ -384,6 +501,7 @@ def main():
 
     print(f"Recent unseen NEWS: {len(news_recent)}")
     print(f"Recent unseen WEB: {len(web_recent)}")
+    print(f"Direct sources suppressed: {len(suppressed_direct)}")
     print(f"Stale unseen baselined: {len(stale)}")
 
     # Prioritize the newest stories if a rare burst exceeds the safe batch.
@@ -405,7 +523,9 @@ def main():
     pending = max(0, len(recent) - sent)
     print(
         f"Google rate-safe cycle: sent={sent}, "
-        f"pending_recent={pending}, stale_baselined={len(stale)}"
+        f"pending_recent={pending}, "
+        f"direct_suppressed={len(suppressed_direct)}, "
+        f"stale_baselined={len(stale)}"
     )
 
 
