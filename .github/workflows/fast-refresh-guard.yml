@@ -1,0 +1,40 @@
+name: PAO Fast Refresh Guard
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fast-refresh-guard.yml"
+  workflow_dispatch:
+  schedule:
+    # Prepare the legacy workflows three minutes before the Fast 2-Min
+    # refresh job runs at minute 23 every four hours.
+    - cron: "20 */4 * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  guard-and-kick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-enable legacy workflows for safe cutover
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
+            echo "Enabling $wf before fast cutover"
+            gh api \
+              --method PUT \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" \
+              || true
+          done
+
+      - name: Start Fast 2-Min watcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run fast-2min-watch.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main
