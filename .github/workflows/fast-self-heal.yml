@@ -1,0 +1,55 @@
+name: PAO Fast Self-Heal
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/fast-self-heal.yml"
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: pao-fast-self-heal
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Keep PAO Fast 2-Min watcher alive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          active="$(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow fast-2min-watch.yml \
+              --limit 10 \
+              --json status \
+              --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")] | length'
+          )"
+
+          echo "Active/queued Fast runs: $active"
+
+          if [ "$active" -gt 0 ]; then
+            echo "Fast 2-Min watcher is alive. No repair needed."
+            exit 0
+          fi
+
+          echo "Fast watcher is not alive. Enabling legacy safety net first..."
+
+          for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" || true
+          done
+
+          echo "Dispatching a fresh Fast 2-Min run..."
+          gh workflow run fast-2min-watch.yml --repo "$GITHUB_REPOSITORY" --ref main
+          echo "Self-heal dispatch completed."
