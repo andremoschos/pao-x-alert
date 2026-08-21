@@ -28,4 +28,4 @@ jobs:
         run: gh workflow run fast-2min-watch.yml --repo andremoschos/pao-x-alert --ref main
 
 # Robust restart: enable legacy workflows before fast cutover.
-# Restart requested after Google direct-source exclusion: 2026-08-21 16:52 Europe/Athens
+# Health-check restart after stale fast heartbeat: 2026-08-21 18:37 Europe/Athens
