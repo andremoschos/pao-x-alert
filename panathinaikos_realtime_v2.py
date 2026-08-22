@@ -12,13 +12,16 @@ from twscrape import API, gather
 
 QUERY = "panathinaikos"
 
-# IMPORTANT:
-# 20 results is deliberately one small SearchTimeline page.
-# The previous 100-result version could consume several X search requests
-# every minute and rate-limit the account very quickly.
-FETCH_LIMIT = 20
-POLL_SECONDS = 60
-FRESH_MINUTES = 4
+# SearchTimeline is explicitly Latest in twscrape.
+# Use two compact pages every 2 minutes instead of one page every minute:
+# roughly the same average X request pressure, but twice the depth per cycle.
+FETCH_LIMIT = 40
+POLL_SECONDS = 120
+
+# X search/indexing can surface a post several minutes after it was actually
+# created. The old 4-minute window silently lost those delayed results.
+# Keep a 2-hour recovery window; ntfy history + local IDs still prevent dupes.
+FRESH_MINUTES = 120
 MAX_SEEN = 5000
 
 STATE = Path("panathinaikos_seen.json")
@@ -128,7 +131,8 @@ async def make_api():
 
 
 async def fetch_latest(api):
-    # FETCH_LIMIT=20 is intentional: one compact search page per cycle.
+    # twscrape SearchTimeline defaults to product="Latest".
+    # limit=40 normally means about two compact pages.
     results = await gather(
         api.search(QUERY, limit=FETCH_LIMIT)
     )
@@ -188,6 +192,7 @@ async def main():
         f"query={QUERY!r} | "
         f"poll={POLL_SECONDS}s | "
         f"fetch_limit={FETCH_LIMIT} | "
+        f"recovery={FRESH_MINUTES}m | "
         f"seen={len(seen)}",
         flush=True,
     )
@@ -204,6 +209,9 @@ async def main():
                 minutes=FRESH_MINUTES
             )
 
+            # Anything inside the recovery window is still eligible even if X
+            # only exposed/indexed it late. Already delivered IDs are excluded
+            # by local state + ntfy history.
             fresh = [
                 t for t in tweets
                 if t["id"] not in seen
@@ -234,7 +242,9 @@ async def main():
                     flush=True,
                 )
 
-            # Baseline older results silently so no old-post flood occurs.
+            # Only results older than the generous recovery window are silently
+            # baselined. This prevents ancient-post floods without losing posts
+            # that X surfaced late.
             for tweet in tweets:
                 if (
                     tweet["id"] not in seen
@@ -245,7 +255,7 @@ async def main():
             print(
                 f"{cycle_started.isoformat()} | "
                 f"results={len(tweets)} | "
-                f"fresh={len(fresh)} | "
+                f"eligible={len(fresh)} | "
                 f"sent={sent}",
                 flush=True,
             )
