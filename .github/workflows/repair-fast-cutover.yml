@@ -22,7 +22,6 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path('.github/workflows/fast-2min-watch.yml')
           text = path.read_text(encoding='utf-8')
@@ -31,39 +30,48 @@ jobs:
               print('Cutover already repaired')
               raise SystemExit(0)
 
-          pattern = re.compile(
-              r'(?m)^(?P<i>[ ]*)for wf in "\$\{workflows\[@\]\}"; do\n'
-              r'(?P=i)  gh api \\\n'
-              r'(?P=i)    --method PUT \\\n'
-              r'(?P=i)    "repos/\$GITHUB_REPOSITORY/actions/workflows/\$wf/disable"\n'
-              r'(?P=i)done\n'
-          )
+          lines = text.splitlines(keepends=True)
+          start = None
 
-          match = pattern.search(text)
-          if not match:
+          for idx in range(len(lines) - 4):
+              if (
+                  lines[idx].strip() == 'for wf in "${workflows[@]}"; do'
+                  and lines[idx + 1].strip() == 'gh api \\'
+                  and lines[idx + 2].strip() == '--method PUT \\'
+                  and lines[idx + 3].strip() == '"repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable"'
+                  and lines[idx + 4].strip() == 'done'
+              ):
+                  start = idx
+                  break
+
+          if start is None:
               raise SystemExit('Target disable block not found; refusing broad edit')
 
-          i = match.group('i')
-          replacement = (
-              f'{i}for wf in "${{workflows[@]}}"; do\n'
-              f'{i}  state="$(\n'
-              f'{i}    gh api \\\n'
-              f'{i}      "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" \\\n'
-              f"{i}      --jq '.state'\n"
-              f'{i}  )"\n\n'
-              f'{i}  if [ "$state" = "active" ]; then\n'
-              f'{i}    gh api \\\n'
-              f'{i}      --method PUT \\\n'
-              f'{i}      "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable"\n'
-              f'{i}    echo "$wf disabled for fast cutover"\n'
-              f'{i}  else\n'
-              f'{i}    echo "$wf already $state; no disable needed"\n'
-              f'{i}  fi\n'
-              f'{i}done\n'
-          )
+          raw = lines[start]
+          indent = raw[:len(raw) - len(raw.lstrip())]
+          bs = chr(92)
 
-          updated = text[:match.start()] + replacement + text[match.end():]
-          path.write_text(updated, encoding='utf-8')
+          replacement = [
+              f'{indent}for wf in "${{workflows[@]}}"; do\n',
+              f'{indent}  state="$(\n',
+              f'{indent}    gh api {bs}\n',
+              f'{indent}      "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" {bs}\n',
+              f"{indent}      --jq '.state'\n",
+              f'{indent}  )"\n',
+              '\n',
+              f'{indent}  if [ "$state" = "active" ]; then\n',
+              f'{indent}    gh api {bs}\n',
+              f'{indent}      --method PUT {bs}\n',
+              f'{indent}      "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable"\n',
+              f'{indent}    echo "$wf disabled for fast cutover"\n',
+              f'{indent}  else\n',
+              f'{indent}    echo "$wf already $state; no disable needed"\n',
+              f'{indent}  fi\n',
+              f'{indent}done\n',
+          ]
+
+          lines[start:start + 5] = replacement
+          path.write_text(''.join(lines), encoding='utf-8')
           print('Cutover repaired safely')
           PY
 
@@ -85,4 +93,4 @@ jobs:
           done
           exit 1
 
-# strict regex repair
+# line-safe repair
