@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-08-22T00:21:02.042189+00:00",
+  "checked_at": "2026-08-22T00:21:47.640622+00:00",
   "fast_workflow_state": "active",
   "legacy_workflows": {
     "watch.yml": "disabled_manually",
@@ -9,7 +9,8 @@
   },
   "safety_workflows": {
     "youtube-backup-watch.yml": "active",
-    "panathinaikos-realtime-v2.yml": "active"
+    "panathinaikos-realtime-v2.yml": "active",
+    "fast-self-heal.yml": "active"
   },
   "fast_runs": [
     {
@@ -61,6 +62,110 @@
       "status": "completed",
       "updatedAt": "2026-08-21T17:51:03Z",
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32510276863"
+    }
+  ],
+  "panathinaikos_v2_runs": [
+    {
+      "conclusion": "",
+      "createdAt": "2026-08-22T00:17:15Z",
+      "databaseId": 32539832289,
+      "event": "push",
+      "headSha": "d9b3398572fd7bd559a4f8f3ad380bcf198b57db",
+      "status": "in_progress",
+      "updatedAt": "2026-08-22T00:17:36Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32539832289"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-21T21:00:34Z",
+      "databaseId": 32526414967,
+      "event": "schedule",
+      "headSha": "e10517cb1885684ebc2cc66f7a21860637c341f6",
+      "status": "completed",
+      "updatedAt": "2026-08-22T00:17:32Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32526414967"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-21T17:50:26Z",
+      "databaseId": 32510237964,
+      "event": "schedule",
+      "headSha": "fa6ea1ff53002831ce26d8326e7e84bb23a7528e",
+      "status": "completed",
+      "updatedAt": "2026-08-21T21:00:51Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32510237964"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-21T14:09:54Z",
+      "databaseId": 32490656139,
+      "event": "schedule",
+      "headSha": "645826b72c784a4474f2c0e8436e0f9ddc5e2df7",
+      "status": "completed",
+      "updatedAt": "2026-08-21T17:50:41Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32490656139"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-21T10:00:22Z",
+      "databaseId": 32470588533,
+      "event": "schedule",
+      "headSha": "59ad5edde58f8cf2c46723eab527d27390f38c10",
+      "status": "completed",
+      "updatedAt": "2026-08-21T14:10:11Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32470588533"
+    }
+  ],
+  "self_heal_runs": [
+    {
+      "conclusion": "success",
+      "createdAt": "2026-08-21T23:52:16Z",
+      "databaseId": 32538409802,
+      "event": "schedule",
+      "headSha": "590735c5b77aad201891503bd198e6836dfa1ef9",
+      "status": "completed",
+      "updatedAt": "2026-08-21T23:52:22Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32538409802"
+    },
+    {
+      "conclusion": "success",
+      "createdAt": "2026-08-21T22:55:46Z",
+      "databaseId": 32534958100,
+      "event": "schedule",
+      "headSha": "a8098895266ca468c75e21fcdbce42f80bbe2acb",
+      "status": "completed",
+      "updatedAt": "2026-08-21T22:55:55Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32534958100"
+    },
+    {
+      "conclusion": "success",
+      "createdAt": "2026-08-21T21:55:37Z",
+      "databaseId": 32530735883,
+      "event": "schedule",
+      "headSha": "e6f0e1983a8d96d2b4a21029dc94b7e93b737a37",
+      "status": "completed",
+      "updatedAt": "2026-08-21T21:55:45Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32530735883"
+    },
+    {
+      "conclusion": "success",
+      "createdAt": "2026-08-21T20:54:55Z",
+      "databaseId": 32525953561,
+      "event": "schedule",
+      "headSha": "32b70bc6977e80afada3a681f011b0231a3c1fe2",
+      "status": "completed",
+      "updatedAt": "2026-08-21T20:55:04Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32525953561"
+    },
+    {
+      "conclusion": "success",
+      "createdAt": "2026-08-21T19:53:13Z",
+      "databaseId": 32520760038,
+      "event": "schedule",
+      "headSha": "886876691f6e2563006974ebcd9b27232dd2418f",
+      "status": "completed",
+      "updatedAt": "2026-08-21T19:53:24Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32520760038"
     }
   ]
 }
