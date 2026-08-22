@@ -18,7 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inspect fast and legacy workflows
+      - name: Inspect fast and safety workflows
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -26,6 +26,8 @@ jobs:
           set -euo pipefail
 
           fast_runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow fast-2min-watch.yml --limit 5 --json databaseId,status,conclusion,event,createdAt,updatedAt,url,headSha)"
+          pan_runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow panathinaikos-realtime-v2.yml --limit 5 --json databaseId,status,conclusion,event,createdAt,updatedAt,url,headSha)"
+          heal_runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow fast-self-heal.yml --limit 5 --json databaseId,status,conclusion,event,createdAt,updatedAt,url,headSha)"
 
           fast_state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/fast-2min-watch.yml" --jq '.state')"
           watch_state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/watch.yml" --jq '.state')"
@@ -34,26 +36,29 @@ jobs:
           youtube_state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/youtube-watch.yml" --jq '.state')"
           youtube_backup_state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/youtube-backup-watch.yml" --jq '.state')"
           panathinaikos_v2_state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/panathinaikos-realtime-v2.yml" --jq '.state')"
+          self_heal_state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/fast-self-heal.yml" --jq '.state')"
 
-          python - "$fast_runs" "$fast_state" "$watch_state" "$google_state" "$official_state" "$youtube_state" "$youtube_backup_state" "$panathinaikos_v2_state" <<'PY'
+          python - "$fast_runs" "$pan_runs" "$heal_runs" "$fast_state" "$watch_state" "$google_state" "$official_state" "$youtube_state" "$youtube_backup_state" "$panathinaikos_v2_state" "$self_heal_state" <<'PY'
           import json, sys
           from datetime import datetime, timezone
 
-          runs = json.loads(sys.argv[1])
           out = {
               "checked_at": datetime.now(timezone.utc).isoformat(),
-              "fast_workflow_state": sys.argv[2],
+              "fast_workflow_state": sys.argv[4],
               "legacy_workflows": {
-                  "watch.yml": sys.argv[3],
-                  "google-watch.yml": sys.argv[4],
-                  "official-watch.yml": sys.argv[5],
-                  "youtube-watch.yml": sys.argv[6],
+                  "watch.yml": sys.argv[5],
+                  "google-watch.yml": sys.argv[6],
+                  "official-watch.yml": sys.argv[7],
+                  "youtube-watch.yml": sys.argv[8],
               },
               "safety_workflows": {
-                  "youtube-backup-watch.yml": sys.argv[7],
-                  "panathinaikos-realtime-v2.yml": sys.argv[8],
+                  "youtube-backup-watch.yml": sys.argv[9],
+                  "panathinaikos-realtime-v2.yml": sys.argv[10],
+                  "fast-self-heal.yml": sys.argv[11],
               },
-              "fast_runs": runs,
+              "fast_runs": json.loads(sys.argv[1]),
+              "panathinaikos_v2_runs": json.loads(sys.argv[2]),
+              "self_heal_runs": json.loads(sys.argv[3]),
           }
           with open("fast_health.json", "w", encoding="utf-8") as f:
               json.dump(out, f, ensure_ascii=False, indent=2)
@@ -85,4 +90,4 @@ jobs:
           echo "Failed to push health snapshot"
           exit 1
 
-# health check retrigger: 2026-08-22T03:20+03:00
+# expanded health check: 2026-08-22T03:22+03:00
