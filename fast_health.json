@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-08-22T00:32:44.207973+00:00",
+  "checked_at": "2026-08-22T00:37:25.999364+00:00",
   "fast_workflow_state": "active",
   "legacy_workflows": {
     "watch.yml": "disabled_manually",
@@ -16,12 +16,22 @@
   "fast_runs": [
     {
       "conclusion": "",
+      "createdAt": "2026-08-22T00:36:16Z",
+      "databaseId": 32540873893,
+      "event": "push",
+      "headSha": "65fa92d11a52ec357d2631a678879171685b0e65",
+      "status": "in_progress",
+      "updatedAt": "2026-08-22T00:36:37Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32540873893"
+    },
+    {
+      "conclusion": "cancelled",
       "createdAt": "2026-08-21T21:26:54Z",
       "databaseId": 32528541810,
       "event": "workflow_dispatch",
       "headSha": "b09fed1d512a966c4993e10addb597227c2ba9a2",
-      "status": "in_progress",
-      "updatedAt": "2026-08-21T21:27:00Z",
+      "status": "completed",
+      "updatedAt": "2026-08-22T00:36:34Z",
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32528541810"
     },
     {
@@ -53,16 +63,6 @@
       "status": "completed",
       "updatedAt": "2026-08-21T21:01:42Z",
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32510288848"
-    },
-    {
-      "conclusion": "cancelled",
-      "createdAt": "2026-08-21T17:50:53Z",
-      "databaseId": 32510276863,
-      "event": "workflow_dispatch",
-      "headSha": "fa6ea1ff53002831ce26d8326e7e84bb23a7528e",
-      "status": "completed",
-      "updatedAt": "2026-08-21T17:51:03Z",
-      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32510276863"
     }
   ],
   "panathinaikos_v2_runs": [
