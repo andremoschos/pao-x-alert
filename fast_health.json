@@ -1,11 +1,11 @@
 {
-  "checked_at": "2026-08-21T13:56:36.881879+00:00",
+  "checked_at": "2026-08-22T00:21:02.042189+00:00",
   "fast_workflow_state": "active",
   "legacy_workflows": {
-    "watch.yml": "active",
-    "google-watch.yml": "active",
-    "official-watch.yml": "active",
-    "youtube-watch.yml": "active"
+    "watch.yml": "disabled_manually",
+    "google-watch.yml": "disabled_manually",
+    "official-watch.yml": "disabled_manually",
+    "youtube-watch.yml": "disabled_manually"
   },
   "safety_workflows": {
     "youtube-backup-watch.yml": "active",
@@ -14,53 +14,53 @@
   "fast_runs": [
     {
       "conclusion": "",
-      "createdAt": "2026-08-21T13:56:01Z",
-      "databaseId": 32489447221,
+      "createdAt": "2026-08-21T21:26:54Z",
+      "databaseId": 32528541810,
       "event": "workflow_dispatch",
-      "headSha": "0c5de9073f1e93a209997ae3119e25505f5064a8",
+      "headSha": "b09fed1d512a966c4993e10addb597227c2ba9a2",
       "status": "in_progress",
-      "updatedAt": "2026-08-21T13:56:23Z",
-      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32489447221"
-    },
-    {
-      "conclusion": "cancelled",
-      "createdAt": "2026-08-21T10:40:42Z",
-      "databaseId": 32473723807,
-      "event": "workflow_dispatch",
-      "headSha": "1a9fc74ec9358c6ae743a175ad5538ca40f94e13",
-      "status": "completed",
-      "updatedAt": "2026-08-21T13:56:19Z",
-      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32473723807"
-    },
-    {
-      "conclusion": "cancelled",
-      "createdAt": "2026-08-21T10:40:23Z",
-      "databaseId": 32473699705,
-      "event": "workflow_dispatch",
-      "headSha": "59ad5edde58f8cf2c46723eab527d27390f38c10",
-      "status": "completed",
-      "updatedAt": "2026-08-21T10:40:55Z",
-      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32473699705"
+      "updatedAt": "2026-08-21T21:27:00Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32528541810"
     },
     {
       "conclusion": "failure",
-      "createdAt": "2026-08-21T10:02:13Z",
-      "databaseId": 32470741450,
+      "createdAt": "2026-08-21T21:03:13Z",
+      "databaseId": 32526634320,
       "event": "schedule",
-      "headSha": "59ad5edde58f8cf2c46723eab527d27390f38c10",
+      "headSha": "e10517cb1885684ebc2cc66f7a21860637c341f6",
       "status": "completed",
-      "updatedAt": "2026-08-21T10:03:12Z",
-      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32470741450"
+      "updatedAt": "2026-08-21T21:04:12Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32526634320"
     },
     {
       "conclusion": "cancelled",
-      "createdAt": "2026-08-21T07:15:36Z",
-      "databaseId": 32457845675,
+      "createdAt": "2026-08-21T21:01:23Z",
+      "databaseId": 32526482933,
       "event": "workflow_dispatch",
-      "headSha": "7f7057a375e71a6bec716272d4c47268ff40875b",
+      "headSha": "e10517cb1885684ebc2cc66f7a21860637c341f6",
       "status": "completed",
-      "updatedAt": "2026-08-21T10:02:32Z",
-      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32457845675"
+      "updatedAt": "2026-08-21T21:03:30Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32526482933"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-21T17:51:01Z",
+      "databaseId": 32510288848,
+      "event": "schedule",
+      "headSha": "fa6ea1ff53002831ce26d8326e7e84bb23a7528e",
+      "status": "completed",
+      "updatedAt": "2026-08-21T21:01:42Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32510288848"
+    },
+    {
+      "conclusion": "cancelled",
+      "createdAt": "2026-08-21T17:50:53Z",
+      "databaseId": 32510276863,
+      "event": "workflow_dispatch",
+      "headSha": "fa6ea1ff53002831ce26d8326e7e84bb23a7528e",
+      "status": "completed",
+      "updatedAt": "2026-08-21T17:51:03Z",
+      "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32510276863"
     }
   ]
 }
