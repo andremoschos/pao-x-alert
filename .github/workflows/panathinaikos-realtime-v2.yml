@@ -2,6 +2,10 @@ name: X Panathinaikos Realtime V2
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "panathinaikos_realtime_v2.py"
+      - ".github/workflows/panathinaikos-realtime-v2.yml"
   schedule:
     # Refresh the long-running runner every 4 hours.
     - cron: "17 */4 * * *"
