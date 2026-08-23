@@ -33,7 +33,7 @@ TOPIC = os.environ["NTFY_GOOGLE_TOPIC"]
 
 
 # These are the exact website domains already monitored DIRECTLY by the
-# Telegram PAO news watcher. Google News + Web must not repeat those sources.
+# PAO watcher system. Google News + Web must not repeat those sources.
 # Filtering is DOMAIN-BASED only; we do not guess from similar titles/names.
 DIRECT_TELEGRAM_DOMAINS = {
     "monobala.gr",
@@ -63,6 +63,7 @@ DIRECT_TELEGRAM_DOMAINS = {
     "olaprasina1908.gr",
     "pao.gr",
     "paobc.gr",
+    "pao1908.com",
     "euroleaguebasketball.net",
     "contra.gr",
     "basketnews.com",
@@ -196,8 +197,9 @@ def host_matches_direct_domain(host):
 def direct_source_domain(entry):
     """
     Return the blocked direct domain if this Google result is already covered
-    by Telegram. Prefer Google News <source url=...>, then the actual Web URL.
-    If neither exposes a reliable domain, keep the result rather than guessing.
+    directly by another PAO watcher. Prefer Google News <source url=...>, then
+    the actual Web URL. If neither exposes a reliable domain, keep the result
+    rather than guessing.
     """
     candidates = [
         entry.get("publisher_url", ""),
@@ -453,8 +455,8 @@ def main():
         return
 
     # Remove only sources whose exact domain is already monitored directly in
-    # Telegram. Suppressed IDs are saved as seen, so they can never backlog and
-    # suddenly flood ntfy after a later restart.
+    # the PAO watcher system. Suppressed IDs are saved as seen, so they can never
+    # backlog and suddenly flood ntfy after a later restart.
     suppressed_direct = []
     entries = []
 
@@ -472,7 +474,7 @@ def main():
             for entry, domain in suppressed_direct[:8]
         )
         print(
-            f"Direct-Telegram sources suppressed from Google: "
+            f"Direct PAO sources suppressed from Google: "
             f"{len(suppressed_direct)} | {examples}"
         )
 
