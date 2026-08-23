@@ -2,6 +2,10 @@ name: Official PAO Website Backup
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/official-website-backup.yml'
+      - 'official_website_backup.py'
   schedule:
     - cron: '*/5 * * * *'
 
