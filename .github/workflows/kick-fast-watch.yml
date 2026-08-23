@@ -28,4 +28,4 @@ jobs:
         run: gh workflow run fast-2min-watch.yml --repo andremoschos/pao-x-alert --ref main
 
 # Robust restart: enable legacy workflows before fast cutover.
-# Health-check recovery after silent fast-loop stall: 2026-08-23 06:34 Europe/Athens
+# Health-check recovery after repeated silent fast-loop stall: 2026-08-23 07:26 Europe/Athens
