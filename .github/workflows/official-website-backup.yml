@@ -36,5 +36,19 @@ jobs:
           git add -- official_website_backup_seen.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update Official PAO website backup state'
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          # The Fast watcher also writes state to main every few minutes. A
+          # single pull/push can therefore lose a race even when this backup
+          # check itself succeeded. Rebase and retry a few times so that such
+          # benign concurrent state commits do not turn the backup workflow red.
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push race on attempt ${attempt}; retrying..."
+            sleep $((attempt * 2))
+          done
+
+          echo 'Failed to save Official PAO backup state after 5 retries.' >&2
+          exit 1
