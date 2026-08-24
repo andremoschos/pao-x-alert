@@ -3,6 +3,8 @@ name: PAO Fast 2-Min Watch
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - ".github/workflows/fast-2min-watch.yml"
       - "fast_runner_v2.py"
