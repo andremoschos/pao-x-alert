@@ -19,8 +19,11 @@ concurrency:
 jobs:
   guard:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
+      - name: Checkout current heartbeat
+        uses: actions/checkout@v4
+
       - name: Keep PAO Fast 2-Min watcher alive
         env:
           GH_TOKEN: ${{ github.token }}
@@ -28,28 +31,58 @@ jobs:
         run: |
           set -euo pipefail
 
-          active="$(
+          active_runs="$(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
               --workflow fast-2min-watch.yml \
               --limit 10 \
-              --json status \
-              --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")] | length'
+              --json databaseId,status \
+              --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")]'
           )"
 
+          active="$(jq 'length' <<<"$active_runs")"
           echo "Active/queued Fast runs: $active"
 
-          if [ "$active" -gt 0 ]; then
-            echo "Fast 2-Min watcher is alive. No repair needed."
+          stale="$(python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          try:
+              data = json.loads(Path("fast_health.json").read_text(encoding="utf-8"))
+              raw = data.get("last_cycle_finished_at") or data.get("runner_started_or_alive_at")
+              if not raw:
+                  print("1")
+              else:
+                  dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                  age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
+                  print("1" if age > 600 else "0")
+                  print(f"Heartbeat age seconds: {age:.0f}", file=__import__("sys").stderr)
+          except Exception as exc:
+              print(f"Heartbeat parse error: {exc}", file=__import__("sys").stderr)
+              print("1")
+          PY
+          )"
+
+          if [ "$active" -gt 0 ] && [ "$stale" = "0" ]; then
+            echo "Fast 2-Min watcher is active and heartbeat is fresh. No repair needed."
             exit 0
           fi
 
-          echo "Fast watcher is not alive. Enabling legacy safety net first..."
+          if [ "$stale" = "1" ]; then
+            echo "Fast watcher heartbeat is stale. Cancelling stuck active runs..."
+            jq -r '.[].databaseId' <<<"$active_runs" | while read -r run_id; do
+              [ -n "$run_id" ] && gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true
+            done
+          else
+            echo "No active Fast runner found."
+          fi
 
+          echo "Enabling safety-net workflows before restart..."
           for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
             gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" || true
           done
 
           echo "Dispatching a fresh Fast 2-Min run..."
           gh workflow run fast-2min-watch.yml --repo "$GITHUB_REPOSITORY" --ref main
-          echo "Self-heal dispatch completed."
+          echo "Self-heal restart dispatched."
