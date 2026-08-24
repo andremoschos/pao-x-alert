@@ -1,43 +1,16 @@
-name: X Panathinaikos Realtime V2
+name: X Panathinaikos Realtime V2 (retired)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "panathinaikos_realtime_v2.py"
-      - ".github/workflows/panathinaikos-realtime-v2.yml"
-  schedule:
-    # Refresh the long-running runner every 4 hours.
-    - cron: "17 */4 * * *"
 
 permissions:
   contents: read
 
-concurrency:
-  group: x-panathinaikos-realtime-v2
-  cancel-in-progress: true
-
 jobs:
-  x-panathinaikos-realtime-v2:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install X dependencies
+      - name: Retired watcher
         run: |
-          pip install requests "twscrape[curl]"
-
-      - name: Run Panathinaikos realtime V2
-        env:
-          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
-          X_CT0: ${{ secrets.X_CT0 }}
-          NTFY_PANATHINAIKOS_TOPIC: ${{ secrets.NTFY_PANATHINAIKOS_TOPIC }}
-        run: python panathinaikos_realtime_v2.py
+          echo "This separate long-running watcher is retired."
+          echo "Only Panathinaikos X is now covered by PAO Fast 2-Min Watch with Chromium fallback."
