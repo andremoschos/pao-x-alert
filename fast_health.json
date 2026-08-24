@@ -168,41 +168,41 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32520760038"
     }
   ],
-  "cycle": 23,
-  "runner_started_or_alive_at": "2026-08-24T21:38:28.369038+00:00",
+  "cycle": 24,
+  "runner_started_or_alive_at": "2026-08-24T21:40:59.069393+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-08-24T21:38:35.627836+00:00",
+      "last_ok": "2026-08-24T21:41:07.245658+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.26
+      "last_duration_seconds": 8.18
     },
     "only_panathinaikos_x": {
       "status": "ok",
-      "last_ok": "2026-08-24T21:38:43.092283+00:00",
+      "last_ok": "2026-08-24T21:41:14.691382+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.46
+      "last_duration_seconds": 7.45
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-24T21:38:48.738501+00:00",
+      "last_ok": "2026-08-24T21:41:20.139179+00:00",
       "last_error": null,
-      "last_duration_seconds": 5.65
+      "last_duration_seconds": 5.45
     },
     "official_pao": {
-      "status": "error",
-      "last_ok": "2026-08-24T20:55:47.523074+00:00",
-      "last_error": "OperationalError: no such table: accounts",
-      "last_duration_seconds": 23.85,
+      "status": "ok",
+      "last_ok": "2026-08-24T21:42:45.883691+00:00",
+      "last_error": null,
+      "last_duration_seconds": 85.74,
       "last_attempt": "2026-08-24T21:38:48.738538+00:00"
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-24T21:39:13.020927+00:00",
+      "last_ok": "2026-08-24T21:42:45.975342+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.43
+      "last_duration_seconds": 0.09
     }
   },
-  "last_cycle_finished_at": "2026-08-24T21:39:13.020954+00:00",
-  "last_cycle_duration_seconds": 44.65
+  "last_cycle_finished_at": "2026-08-24T21:42:45.975372+00:00",
+  "last_cycle_duration_seconds": 106.91
 }
