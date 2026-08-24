@@ -10,7 +10,6 @@ import requests
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
-
 STATE = Path("official_seen.json")
 FRESH_MINUTES = 120
 FETCH_LIMIT = 40
@@ -21,21 +20,9 @@ X_AUTH_TOKEN = os.environ["X_AUTH_TOKEN"]
 X_CT0 = os.environ["X_CT0"]
 
 X_SOURCES = [
-    {
-        "key": "x_pae",
-        "org": "PAE",
-        "username": "paofc_",
-    },
-    {
-        "key": "x_kae",
-        "org": "KAE",
-        "username": "Paobcgr",
-    },
-    {
-        "key": "x_ao",
-        "org": "AO",
-        "username": "acpanathinaikos",
-    },
+    {"key": "x_pae", "org": "PAE", "username": "paofc_"},
+    {"key": "x_kae", "org": "KAE", "username": "Paobcgr"},
+    {"key": "x_ao", "org": "AO", "username": "acpanathinaikos"},
 ]
 
 
@@ -65,13 +52,9 @@ def load_state():
 def save_state(data):
     ids = sorted(set(str(x) for x in data.get("ids", [])))
     data["ids"] = ids[-MAX_SEEN:]
-
-    initialized = set(
-        str(x) for x in data.get("initialized_sources", [])
-    )
+    initialized = set(str(x) for x in data.get("initialized_sources", []))
     initialized.update(source["key"] for source in X_SOURCES)
     data["initialized_sources"] = sorted(initialized)
-
     STATE.write_text(
         json.dumps(data, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -84,21 +67,16 @@ def snowflake_datetime(tweet_id):
 
 
 def notify(source, tweet):
-    username = (
-        getattr(getattr(tweet, "user", None), "username", "")
-        or source["username"]
-    )
+    username = getattr(getattr(tweet, "user", None), "username", "") or source["username"]
     text = (getattr(tweet, "rawContent", "") or "").strip()
     tweet_id = str(tweet.id)
     url = f"https://x.com/{username}/status/{tweet_id}"
-
     headers = {
         "Title": f"OFFICIAL PAO - {source['org']} - X",
         "Priority": "high",
         "Tags": "green_circle",
         "Click": url,
     }
-
     body = f"@{username}\n{text}\n{url}"
     r = requests.post(
         f"https://ntfy.sh/{TOPIC}",
@@ -112,82 +90,51 @@ def notify(source, tweet):
 async def fetch_source_twscrape(api, source):
     user = await api.user_by_login(source["username"])
     if not user:
-        raise RuntimeError(
-            f"Could not resolve @{source['username']}"
-        )
-
+        raise RuntimeError(f"Could not resolve @{source['username']}")
     user_id = getattr(user, "id", None)
     if not user_id:
-        raise RuntimeError(
-            f"No user id returned for @{source['username']}"
-        )
-
-    tweets = await gather(
-        api.user_tweets_and_replies(user_id, limit=FETCH_LIMIT)
-    )
-
+        raise RuntimeError(f"No user id returned for @{source['username']}")
+    tweets = await gather(api.user_tweets_and_replies(user_id, limit=FETCH_LIMIT))
     out = []
     for tweet in tweets:
-        username = (
-            getattr(getattr(tweet, "user", None), "username", "")
-            or source["username"]
-        )
-
-        if username.lower() != source["username"].lower():
-            continue
-
-        out.append(tweet)
-
+        username = getattr(getattr(tweet, "user", None), "username", "") or source["username"]
+        if username.lower() == source["username"].lower():
+            out.append(tweet)
     if not out:
-        raise RuntimeError(
-            f"twscrape returned 0 own posts for @{source['username']}"
-        )
-
+        raise RuntimeError(f"twscrape returned 0 own posts for @{source['username']}")
     return out
 
 
 async def fetch_source_browser(source):
-    """Direct authenticated X profile fallback when GraphQL/twscrape is rate-limited."""
     username = source["username"]
-
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox"],
-        )
-
+        browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
         context = await browser.new_context(
             viewport={"width": 1400, "height": 1100},
             locale="en-US",
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/131 Safari/537.36"
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36"
             ),
         )
-
-        await context.add_cookies(
-            [
-                {
-                    "name": "auth_token",
-                    "value": X_AUTH_TOKEN,
-                    "domain": ".x.com",
-                    "path": "/",
-                    "secure": True,
-                    "httpOnly": True,
-                },
-                {
-                    "name": "ct0",
-                    "value": X_CT0,
-                    "domain": ".x.com",
-                    "path": "/",
-                    "secure": True,
-                },
-            ]
-        )
-
+        await context.add_cookies([
+            {
+                "name": "auth_token",
+                "value": X_AUTH_TOKEN,
+                "domain": ".x.com",
+                "path": "/",
+                "secure": True,
+                "httpOnly": True,
+            },
+            {
+                "name": "ct0",
+                "value": X_CT0,
+                "domain": ".x.com",
+                "path": "/",
+                "secure": True,
+            },
+        ])
         page = await context.new_page()
-
         try:
             await page.goto(
                 f"https://x.com/{username}",
@@ -195,34 +142,21 @@ async def fetch_source_browser(source):
                 timeout=45000,
             )
             await page.wait_for_timeout(5500)
-
             articles = page.locator("article")
             count = min(await articles.count(), 25)
             found = {}
-
             for i in range(count):
                 article = articles.nth(i)
-
                 try:
-                    text = " ".join(
-                        (await article.inner_text(timeout=3000)).split()
-                    ).strip()
+                    text = " ".join((await article.inner_text(timeout=3000)).split()).strip()
                 except Exception:
                     text = ""
-
                 links = article.locator('a[href*="/status/"]')
-                link_count = min(await links.count(), 20)
-
-                for j in range(link_count):
+                for j in range(min(await links.count(), 20)):
                     href = (await links.nth(j).get_attribute("href") or "").strip()
-                    m = re.search(
-                        rf"/{re.escape(username)}/status/(\d+)",
-                        href,
-                        flags=re.I,
-                    )
+                    m = re.search(rf"/{re.escape(username)}/status/(\d+)", href, flags=re.I)
                     if not m:
                         continue
-
                     tweet_id = m.group(1)
                     found[tweet_id] = SimpleTweet(
                         id=int(tweet_id),
@@ -230,98 +164,77 @@ async def fetch_source_browser(source):
                         user=SimpleUser(username=username),
                     )
                     break
-
-            out = sorted(
-                found.values(),
-                key=lambda tweet: int(tweet.id),
-                reverse=True,
-            )
-
+            out = sorted(found.values(), key=lambda tweet: int(tweet.id), reverse=True)
             if not out:
-                raise RuntimeError(
-                    f"browser returned 0 own status posts for @{username}"
-                )
-
-            print(
-                f"{source['key']} X browser fallback: {len(out)} posts",
-                flush=True,
-            )
+                raise RuntimeError(f"browser returned 0 own status posts for @{username}")
+            print(f"{source['key']} X browser fallback: {len(out)} posts", flush=True)
             return out
-
         finally:
             await browser.close()
 
 
 async def fetch_source(api, source):
-    try:
-        return await fetch_source_twscrape(api, source)
-    except Exception as exc:
+    if api is not None:
+        try:
+            return await fetch_source_twscrape(api, source)
+        except Exception as exc:
+            print(
+                f"{source['key']} twscrape failed: {exc}; trying Chromium profile fallback",
+                flush=True,
+            )
+    else:
         print(
-            f"{source['key']} twscrape failed: {exc}; trying Chromium profile fallback",
+            f"{source['key']} twscrape unavailable; using Chromium profile fallback",
             flush=True,
         )
-        return await fetch_source_browser(source)
+    return await fetch_source_browser(source)
+
+
+async def make_api_or_none():
+    db = "/tmp/twscrape_official_x_direct.db"
+    Path(db).unlink(missing_ok=True)
+    try:
+        api = API(db, raise_when_no_account=True, wait_timeout=12, wait_interval=1)
+        cookie_header = f"auth_token={X_AUTH_TOKEN}; ct0={X_CT0}"
+        await api.pool.add_account_cookies("official-x-direct", cookie_header)
+        return api
+    except Exception as exc:
+        print(
+            f"Official X twscrape setup failed: {type(exc).__name__}: {exc}; "
+            "using Chromium-only recovery",
+            flush=True,
+        )
+        return None
 
 
 async def main():
     state = load_state()
     seen = set(str(x) for x in state.get("ids", []))
-
-    db = "/tmp/twscrape_official_x_direct.db"
-    Path(db).unlink(missing_ok=True)
-
-    api = API(
-        db,
-        raise_when_no_account=True,
-        wait_timeout=12,
-        wait_interval=1,
-    )
-
-    cookie_header = f"auth_token={X_AUTH_TOKEN}; ct0={X_CT0}"
-    await api.pool.add_account_cookies(
-        "official-x-direct",
-        cookie_header,
-    )
-
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(minutes=FRESH_MINUTES)
-
+    api = await make_api_or_none()
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=FRESH_MINUTES)
     total_sent = 0
+    successful_sources = 0
 
     for source in X_SOURCES:
         try:
             tweets = await fetch_source(api, source)
-
-            older_or_already_seen = []
+            successful_sources += 1
             fresh_recent = []
-
             for tweet in tweets:
                 tweet_id = str(tweet.id)
                 item_id = f"{source['key']}:{tweet_id}"
-
                 if item_id in seen:
-                    older_or_already_seen.append(item_id)
                     continue
-
                 if snowflake_datetime(tweet_id) >= cutoff:
                     fresh_recent.append(tweet)
                 else:
-                    # Old unseen items are safe to baseline silently.
-                    older_or_already_seen.append(item_id)
+                    seen.add(item_id)
 
-            seen.update(older_or_already_seen)
-
-            for tweet in sorted(
-                fresh_recent,
-                key=lambda t: int(t.id),
-            ):
+            for tweet in sorted(fresh_recent, key=lambda t: int(t.id)):
                 item_id = f"{source['key']}:{tweet.id}"
-
-                # IMPORTANT: mark seen only AFTER ntfy confirms delivery.
                 notify(source, tweet)
                 seen.add(item_id)
                 total_sent += 1
-
                 print(
                     "OFFICIAL X DIRECT SENT:",
                     source["org"],
@@ -334,22 +247,18 @@ async def main():
                 f"{len(fresh_recent)} recent unseen sent",
                 flush=True,
             )
-
         except Exception as exc:
-            # One account failing must not kill the other official accounts.
-            # Crucially, failed fresh posts are NOT added to seen and can retry.
-            print(
-                f"{source['key']} direct error: {exc}",
-                flush=True,
-            )
+            print(f"{source['key']} direct error: {exc}", flush=True)
 
     state["ids"] = sorted(seen)
     save_state(state)
-
     print(
-        f"Official X direct complete: {total_sent} notifications sent",
+        f"Official X direct complete: {total_sent} notifications sent; "
+        f"sources_ok={successful_sources}/{len(X_SOURCES)}",
         flush=True,
     )
+    if successful_sources == 0:
+        raise RuntimeError("Official X recovery failed for all sources")
 
 
 if __name__ == "__main__":
