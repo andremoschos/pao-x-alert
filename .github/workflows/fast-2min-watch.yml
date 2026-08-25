@@ -1,5 +1,6 @@
 name: PAO Fast 2-Min Watch
 
+# Recovery trigger: refresh stalled long-running runner safely.
 on:
   workflow_dispatch:
   push:
