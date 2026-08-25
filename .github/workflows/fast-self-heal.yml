@@ -31,6 +31,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          # A GitHub run can remain in_progress while the internal 2-minute loop
+          # is silently stuck, so always validate the persisted heartbeat too.
           active_runs="$(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
