@@ -60,7 +60,7 @@ jobs:
               "panathinaikos_v2_runs": json.loads(sys.argv[2]),
               "self_heal_runs": json.loads(sys.argv[3]),
           }
-          with open("fast_health.json", "w", encoding="utf-8") as f:
+          with open("fast_workflow_health.json", "w", encoding="utf-8") as f:
               json.dump(out, f, ensure_ascii=False, indent=2)
               f.write("\n")
           print(json.dumps(out, ensure_ascii=False, indent=2))
@@ -70,12 +70,12 @@ jobs:
         run: |
           git config user.name "pao-x-alert"
           git config user.email "actions@users.noreply.github.com"
-          git add fast_health.json
+          git add fast_workflow_health.json
           if git diff --cached --quiet; then
             echo "No health snapshot changes"
             exit 0
           fi
-          git commit -m "Update fast watcher health snapshot"
+          git commit -m "Update Fast workflow health snapshot"
           for attempt in 1 2 3 4 5; do
             if ! git pull --rebase origin main; then
               git rebase --abort || true
@@ -90,5 +90,4 @@ jobs:
           echo "Failed to push health snapshot"
           exit 1
 
-# production-only health check
-# international-direct final verification: 2026-08-27 01:43 Europe/Athens
+# production-only workflow health check; fast_health.json is reserved for runner heartbeat
