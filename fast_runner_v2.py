@@ -5,6 +5,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
+
 import google_monitor as google
 import monitor as x_general
 import official_monitor as official
@@ -22,6 +24,40 @@ STATE_FILES = [
     "youtube_seen.json",
     "fast_health.json",
 ]
+
+# ntfy.sh can temporarily rate-limit bursts from the shared GitHub runner IP.
+# All watcher modules use the same requests module object, so patching post here
+# gives X, Only-X, Official and YouTube one consistent retry/backoff policy.
+_ORIGINAL_REQUESTS_POST = requests.post
+
+
+def resilient_post(url, *args, **kwargs):
+    if not str(url).startswith("https://ntfy.sh/"):
+        return _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
+
+    response = None
+    for attempt in range(1, 6):
+        response = _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
+        if response.status_code != 429:
+            return response
+
+        retry_after = response.headers.get("Retry-After", "")
+        try:
+            delay = float(retry_after)
+        except Exception:
+            delay = 3.0 * attempt
+
+        delay = max(2.0, min(delay, 20.0))
+        print(
+            f"ntfy 429 for {url}; retry {attempt}/5 in {delay:.1f}s",
+            flush=True,
+        )
+        time.sleep(delay)
+
+    return response
+
+
+requests.post = resilient_post
 
 
 def now_iso():
