@@ -3,6 +3,7 @@ import json
 import subprocess
 import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import requests
@@ -25,31 +26,76 @@ STATE_FILES = [
     "fast_health.json",
 ]
 
-# ntfy.sh can temporarily rate-limit bursts from the shared GitHub runner IP.
-# All watcher modules use the same requests module object, so patching post here
-# gives X, Only-X, Official and YouTube one consistent retry/backoff policy.
+# ntfy.sh applies visitor/IP rate limits. All watcher modules share this same
+# requests module object, so a single wrapper can pace ALL ntfy traffic from the
+# Fast runner instead of allowing X/Official/YouTube bursts to collide.
 _ORIGINAL_REQUESTS_POST = requests.post
+_NTFY_MIN_GAP_SECONDS = 3.0
+_last_ntfy_request_at = 0.0
+
+
+def _rate_limit_delay(response, attempt):
+    """Return a safe cooldown using every reset hint ntfy/proxies may expose."""
+    now = time.time()
+
+    retry_after = response.headers.get("Retry-After", "").strip()
+    if retry_after:
+        try:
+            return max(1.0, float(retry_after))
+        except Exception:
+            try:
+                retry_dt = parsedate_to_datetime(retry_after)
+                if retry_dt.tzinfo is None:
+                    retry_dt = retry_dt.replace(tzinfo=timezone.utc)
+                return max(1.0, retry_dt.timestamp() - now)
+            except Exception:
+                pass
+
+    for header in ("X-RateLimit-Reset", "RateLimit-Reset"):
+        raw = response.headers.get(header, "").strip()
+        if not raw:
+            continue
+        try:
+            value = float(raw)
+            # Most reset headers are Unix timestamps; small values are seconds.
+            if value > now - 60:
+                return max(1.0, value - now)
+            return max(1.0, value)
+        except Exception:
+            pass
+
+    # Conservative exponential fallback. The previous 20-second hard cap kept
+    # retrying inside an active ntfy cooldown and caused 4-12 minute cycles.
+    return min(90.0, 8.0 * (2 ** (attempt - 1)))
 
 
 def resilient_post(url, *args, **kwargs):
+    global _last_ntfy_request_at
+
     if not str(url).startswith("https://ntfy.sh/"):
         return _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
 
     response = None
     for attempt in range(1, 6):
+        # Keep a visitor-wide floor between sends. This is intentionally shared
+        # across every topic/component in this Python process.
+        since_last = time.monotonic() - _last_ntfy_request_at
+        if since_last < _NTFY_MIN_GAP_SECONDS:
+            time.sleep(_NTFY_MIN_GAP_SECONDS - since_last)
+
         response = _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
+        _last_ntfy_request_at = time.monotonic()
+
         if response.status_code != 429:
             return response
 
-        retry_after = response.headers.get("Retry-After", "")
-        try:
-            delay = float(retry_after)
-        except Exception:
-            delay = 3.0 * attempt
-
-        delay = max(2.0, min(delay, 20.0))
+        delay = _rate_limit_delay(response, attempt)
+        # Respect real server cooldowns, but do not let one response sleep the
+        # runner forever. A later cycle can retry an undelivered item.
+        delay = max(3.0, min(delay, 120.0))
         print(
-            f"ntfy 429 for {url}; retry {attempt}/5 in {delay:.1f}s",
+            f"ntfy 429 for {url}; visitor-wide cooldown {delay:.1f}s "
+            f"(attempt {attempt}/5)",
             flush=True,
         )
         time.sleep(delay)
