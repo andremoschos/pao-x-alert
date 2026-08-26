@@ -6,7 +6,8 @@ on:
     paths:
       - ".github/workflows/fast-self-heal.yml"
   schedule:
-    - cron: "*/15 * * * *"
+    # Stagger away from the top of the hour and check every 10 minutes.
+    - cron: "3,13,23,33,43,53 * * * *"
 
 permissions:
   actions: write
@@ -32,10 +33,9 @@ jobs:
           set -euo pipefail
 
           # A GitHub run can remain in_progress while the internal loop is
-          # silently stuck, so validate the persisted heartbeat too. Use a
-          # 20-minute stale threshold: normal cycles are ~2 minutes, while a
-          # legitimate ntfy Retry-After cooldown can temporarily stretch a
-          # cycle beyond 10 minutes. This avoids restart/rate-limit thrashing.
+          # silently stuck, so validate the persisted heartbeat too. The Fast
+          # runner now bounds ntfy retry waits, therefore 12 minutes is enough
+          # to distinguish a real stall from a temporarily slow cycle.
           active_runs="$(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
@@ -61,7 +61,7 @@ jobs:
               else:
                   dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
                   age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
-                  print("1" if age > 1200 else "0")
+                  print("1" if age > 720 else "0")
                   print(f"Heartbeat age seconds: {age:.0f}", file=__import__("sys").stderr)
           except Exception as exc:
               print(f"Heartbeat parse error: {exc}", file=__import__("sys").stderr)
