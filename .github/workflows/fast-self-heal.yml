@@ -33,20 +33,46 @@ jobs:
           set -euo pipefail
 
           # A GitHub run can remain in_progress while the internal loop is
-          # silently stuck, so validate the persisted heartbeat too. The Fast
-          # runner now bounds ntfy retry waits, therefore 12 minutes is enough
-          # to distinguish a real stall from a temporarily slow cycle.
+          # silently stuck, so validate the persisted heartbeat too. Fresh
+          # runners get a startup grace window so they can finish the first
+          # full X/Google/Official/YouTube cycle before heartbeat enforcement.
           active_runs="$(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
               --workflow fast-2min-watch.yml \
               --limit 10 \
-              --json databaseId,status \
+              --json databaseId,status,createdAt \
               --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")]'
           )"
 
           active="$(jq 'length' <<<"$active_runs")"
           echo "Active/queued Fast runs: $active"
+
+          startup_grace="$(python - "$active_runs" <<'PY'
+          import json, sys
+          from datetime import datetime, timezone
+
+          try:
+              runs = json.loads(sys.argv[1])
+              if not runs:
+                  print("0")
+              else:
+                  ages = []
+                  now = datetime.now(timezone.utc)
+                  for run in runs:
+                      raw = run.get("createdAt")
+                      if not raw:
+                          continue
+                      dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                      ages.append((now - dt.astimezone(timezone.utc)).total_seconds())
+                  youngest = min(ages) if ages else 999999
+                  print("1" if youngest <= 720 else "0")
+                  print(f"Youngest active Fast run age seconds: {youngest:.0f}", file=sys.stderr)
+          except Exception as exc:
+              print(f"Startup-grace parse error: {exc}", file=sys.stderr)
+              print("0")
+          PY
+          )"
 
           stale="$(python - <<'PY'
           import json
@@ -68,6 +94,11 @@ jobs:
               print("1")
           PY
           )"
+
+          if [ "$active" -gt 0 ] && [ "$startup_grace" = "1" ]; then
+            echo "Fresh Fast runner is inside 12-minute startup grace. No repair needed."
+            exit 0
+          fi
 
           if [ "$active" -gt 0 ] && [ "$stale" = "0" ]; then
             echo "Fast 2-Min watcher is active and heartbeat is fresh. No repair needed."
