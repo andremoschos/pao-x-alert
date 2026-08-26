@@ -31,6 +31,8 @@ STATE_FILES = [
 # Fast runner instead of allowing X/Official/YouTube bursts to collide.
 _ORIGINAL_REQUESTS_POST = requests.post
 _NTFY_MIN_GAP_SECONDS = 3.0
+_NTFY_MAX_ATTEMPTS = 3
+_NTFY_MAX_COOLDOWN_SECONDS = 25.0
 _last_ntfy_request_at = 0.0
 
 
@@ -64,9 +66,7 @@ def _rate_limit_delay(response, attempt):
         except Exception:
             pass
 
-    # Conservative exponential fallback. The previous 20-second hard cap kept
-    # retrying inside an active ntfy cooldown and caused 4-12 minute cycles.
-    return min(90.0, 8.0 * (2 ** (attempt - 1)))
+    return min(20.0, 6.0 * (2 ** (attempt - 1)))
 
 
 def resilient_post(url, *args, **kwargs):
@@ -76,7 +76,7 @@ def resilient_post(url, *args, **kwargs):
         return _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
 
     response = None
-    for attempt in range(1, 6):
+    for attempt in range(1, _NTFY_MAX_ATTEMPTS + 1):
         # Keep a visitor-wide floor between sends. This is intentionally shared
         # across every topic/component in this Python process.
         since_last = time.monotonic() - _last_ntfy_request_at
@@ -89,13 +89,23 @@ def resilient_post(url, *args, **kwargs):
         if response.status_code != 429:
             return response
 
+        # Never let an ntfy cooldown freeze the whole PAO runner for many
+        # minutes. If the last retry is still rate-limited, return the 429 so
+        # the component records an error and the undelivered item retries next
+        # cycle instead of blocking every other watcher.
+        if attempt >= _NTFY_MAX_ATTEMPTS:
+            print(
+                f"ntfy 429 for {url}; retry budget exhausted, "
+                "leaving item pending for the next cycle",
+                flush=True,
+            )
+            return response
+
         delay = _rate_limit_delay(response, attempt)
-        # Respect real server cooldowns, but do not let one response sleep the
-        # runner forever. A later cycle can retry an undelivered item.
-        delay = max(3.0, min(delay, 120.0))
+        delay = max(3.0, min(delay, _NTFY_MAX_COOLDOWN_SECONDS))
         print(
-            f"ntfy 429 for {url}; visitor-wide cooldown {delay:.1f}s "
-            f"(attempt {attempt}/5)",
+            f"ntfy 429 for {url}; bounded visitor-wide cooldown {delay:.1f}s "
+            f"(attempt {attempt}/{_NTFY_MAX_ATTEMPTS})",
             flush=True,
         )
         time.sleep(delay)
