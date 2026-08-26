@@ -168,44 +168,44 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32520760038"
     }
   ],
-  "cycle": 1098,
-  "runner_started_or_alive_at": "2026-08-26T12:04:44.747352+00:00",
+  "cycle": 1099,
+  "runner_started_or_alive_at": "2026-08-26T12:07:59.198173+00:00",
   "components": {
     "x_general": {
       "status": "error",
       "last_ok": "2026-08-26T12:02:51.958805+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-pao-847291",
-      "last_duration_seconds": 57.84,
-      "last_attempt": "2026-08-26T12:04:44.747384+00:00"
+      "last_duration_seconds": 57.57,
+      "last_attempt": "2026-08-26T12:07:59.198206+00:00"
     },
     "only_panathinaikos_x": {
       "status": "error",
       "last_ok": "2026-08-26T12:02:59.340034+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-x-panathinaikos-583742",
-      "last_duration_seconds": 57.86,
-      "last_attempt": "2026-08-26T12:05:42.587066+00:00"
+      "last_duration_seconds": 57.74,
+      "last_attempt": "2026-08-26T12:08:56.766201+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-26T12:07:08.692627+00:00",
+      "last_ok": "2026-08-26T12:10:22.776690+00:00",
       "last_error": null,
-      "last_duration_seconds": 28.25
+      "last_duration_seconds": 28.27
     },
     "official_pao": {
-      "status": "ok",
+      "status": "error",
       "last_ok": "2026-08-26T12:07:52.112801+00:00",
-      "last_error": null,
-      "last_duration_seconds": 43.42,
-      "last_attempt": "2026-08-24T21:38:48.738538+00:00"
+      "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-official-pao-847291",
+      "last_duration_seconds": 22.93,
+      "last_attempt": "2026-08-26T12:10:22.776783+00:00"
     },
     "youtube_pao": {
       "status": "error",
       "last_ok": "2026-08-26T12:03:50.163096+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-youtube-pao-847291",
-      "last_duration_seconds": 0.57,
-      "last_attempt": "2026-08-26T12:07:52.112855+00:00"
+      "last_duration_seconds": 0.62,
+      "last_attempt": "2026-08-26T12:10:45.706093+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-26T12:07:52.682666+00:00",
-  "last_cycle_duration_seconds": 187.94
+  "last_cycle_finished_at": "2026-08-26T12:10:46.330194+00:00",
+  "last_cycle_duration_seconds": 167.13
 }
