@@ -168,41 +168,42 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 2,
-  "runner_started_or_alive_at": "2026-08-26T22:49:42.523450+00:00",
+  "cycle": 3,
+  "runner_started_or_alive_at": "2026-08-26T22:53:20.917299+00:00",
   "components": {
     "x_general": {
-      "status": "error",
-      "last_ok": "2026-08-26T22:47:04.681671+00:00",
-      "last_error": "RuntimeError: Chromium X search returned 0 posts",
-      "last_duration_seconds": 7.2,
+      "status": "ok",
+      "last_ok": "2026-08-26T22:53:28.643716+00:00",
+      "last_error": null,
+      "last_duration_seconds": 7.73,
       "last_attempt": "2026-08-26T22:49:42.523518+00:00"
     },
     "only_panathinaikos_x": {
-      "status": "error",
+      "status": "ok",
       "last_attempt": "2026-08-26T22:49:49.728469+00:00",
-      "last_error": "RuntimeError: Chromium Panathinaikos search returned 0 posts",
-      "last_duration_seconds": 7.16
+      "last_error": null,
+      "last_duration_seconds": 22.31,
+      "last_ok": "2026-08-26T22:53:50.957493+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-26T22:50:04.151967+00:00",
+      "last_ok": "2026-08-26T22:54:01.368800+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.26
+      "last_duration_seconds": 10.41
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-26T22:50:51.697057+00:00",
+      "last_ok": "2026-08-26T22:54:31.976080+00:00",
       "last_error": null,
-      "last_duration_seconds": 47.55
+      "last_duration_seconds": 30.61
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-26T22:50:51.698086+00:00",
+      "last_ok": "2026-08-26T22:54:32.291001+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.0
+      "last_duration_seconds": 0.31
     }
   },
-  "last_cycle_finished_at": "2026-08-26T22:50:51.698113+00:00",
-  "last_cycle_duration_seconds": 69.17
+  "last_cycle_finished_at": "2026-08-26T22:54:32.291031+00:00",
+  "last_cycle_duration_seconds": 71.37
 }
