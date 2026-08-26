@@ -1,11 +1,11 @@
 {
-  "checked_at": "2026-08-26T22:46:23.878160+00:00",
+  "checked_at": "2026-08-26T22:47:56.245382+00:00",
   "fast_workflow_state": "active",
   "legacy_workflows": {
-    "watch.yml": "active",
-    "google-watch.yml": "active",
-    "official-watch.yml": "active",
-    "youtube-watch.yml": "active"
+    "watch.yml": "disabled_manually",
+    "google-watch.yml": "disabled_manually",
+    "official-watch.yml": "disabled_manually",
+    "youtube-watch.yml": "disabled_manually"
   },
   "safety_workflows": {
     "youtube-backup-watch.yml": "active",
@@ -19,8 +19,8 @@
       "databaseId": 33020726522,
       "event": "workflow_dispatch",
       "headSha": "9333312fb33f0244b1d858e93e41526d58ad6061",
-      "status": "queued",
-      "updatedAt": "2026-08-26T22:46:18Z",
+      "status": "in_progress",
+      "updatedAt": "2026-08-26T22:46:23Z",
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/33020726522"
     },
     {
