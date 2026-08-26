@@ -6,119 +6,133 @@ on:
     paths:
       - ".github/workflows/fast-self-heal.yml"
   schedule:
-    # Stagger away from the top of the hour and check every 10 minutes.
-    - cron: "3,13,23,33,43,53 * * * *"
+    # Last-resort refresh only. The watchdog normally hands off to itself,
+    # so recovery no longer depends on GitHub cron firing every few minutes.
+    - cron: "17 */4 * * *"
 
 permissions:
   actions: write
   contents: read
 
 concurrency:
-  group: pao-fast-self-heal
-  cancel-in-progress: true
+  group: pao-fast-continuous-watchdog
+  cancel-in-progress: false
 
 jobs:
   guard:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout current heartbeat
-        uses: actions/checkout@v4
+    timeout-minutes: 260
 
-      - name: Keep PAO Fast 2-Min watcher alive
+    steps:
+      - name: Run continuous PAO recovery watchdog
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
 
-          # A GitHub run can remain in_progress while the internal loop is
-          # silently stuck, so validate the persisted heartbeat too. Fresh
-          # runners get a startup grace window so they can finish the first
-          # full X/Google/Official/YouTube cycle before heartbeat enforcement.
-          active_runs="$(
-            gh run list \
-              --repo "$GITHUB_REPOSITORY" \
-              --workflow fast-2min-watch.yml \
-              --limit 10 \
-              --json databaseId,status,createdAt \
-              --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")]'
-          )"
+          check_fast() {
+            active_runs="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow fast-2min-watch.yml \
+                --limit 10 \
+                --json databaseId,status,createdAt \
+                --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")]' \
+                2>/dev/null || echo '[]'
+            )"
 
-          active="$(jq 'length' <<<"$active_runs")"
-          echo "Active/queued Fast runs: $active"
+            active="$(jq 'length' <<<"$active_runs" 2>/dev/null || echo 0)"
 
-          startup_grace="$(python - "$active_runs" <<'PY'
+            youngest_age="$(python - "$active_runs" <<'PY'
           import json, sys
           from datetime import datetime, timezone
 
           try:
               runs = json.loads(sys.argv[1])
-              if not runs:
-                  print("0")
-              else:
-                  ages = []
-                  now = datetime.now(timezone.utc)
-                  for run in runs:
-                      raw = run.get("createdAt")
-                      if not raw:
-                          continue
-                      dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-                      ages.append((now - dt.astimezone(timezone.utc)).total_seconds())
-                  youngest = min(ages) if ages else 999999
-                  print("1" if youngest <= 720 else "0")
-                  print(f"Youngest active Fast run age seconds: {youngest:.0f}", file=sys.stderr)
-          except Exception as exc:
-              print(f"Startup-grace parse error: {exc}", file=sys.stderr)
-              print("0")
+              now = datetime.now(timezone.utc)
+              ages = []
+              for run in runs:
+                  raw = run.get("createdAt")
+                  if not raw:
+                      continue
+                  dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                  ages.append((now - dt.astimezone(timezone.utc)).total_seconds())
+              print(int(min(ages)) if ages else 999999)
+          except Exception:
+              print(999999)
           PY
-          )"
+            )"
 
-          stale="$(python - <<'PY'
-          import json
+            heartbeat_tmp="$(mktemp)"
+            if ! gh api \
+              "repos/$GITHUB_REPOSITORY/contents/fast_health.json?ref=main" \
+              --jq '.content' 2>/dev/null \
+              | tr -d '\n' \
+              | base64 --decode >"$heartbeat_tmp" 2>/dev/null; then
+              echo '{}' >"$heartbeat_tmp"
+            fi
+
+            heartbeat_age="$(python - "$heartbeat_tmp" <<'PY'
+          import json, sys
           from datetime import datetime, timezone
           from pathlib import Path
 
           try:
-              data = json.loads(Path("fast_health.json").read_text(encoding="utf-8"))
+              data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
               raw = data.get("last_cycle_finished_at") or data.get("runner_started_or_alive_at")
               if not raw:
-                  print("1")
+                  print(999999)
               else:
                   dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
                   age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
-                  print("1" if age > 720 else "0")
-                  print(f"Heartbeat age seconds: {age:.0f}", file=__import__("sys").stderr)
-          except Exception as exc:
-              print(f"Heartbeat parse error: {exc}", file=__import__("sys").stderr)
-              print("1")
+                  print(max(0, int(age)))
+          except Exception:
+              print(999999)
           PY
-          )"
+            )"
+            rm -f "$heartbeat_tmp"
 
-          if [ "$active" -gt 0 ] && [ "$startup_grace" = "1" ]; then
-            echo "Fresh Fast runner is inside 12-minute startup grace. No repair needed."
-            exit 0
-          fi
+            echo "Fast active=$active youngest_age=${youngest_age}s heartbeat_age=${heartbeat_age}s"
 
-          if [ "$active" -gt 0 ] && [ "$stale" = "0" ]; then
-            echo "Fast 2-Min watcher is active and heartbeat is fresh. No repair needed."
-            exit 0
-          fi
+            # A newly-started runner gets 12 minutes to install dependencies and
+            # finish its first full cycle. After that the persisted heartbeat must
+            # remain fresher than 12 minutes.
+            if [ "$active" -gt 0 ] && { [ "$youngest_age" -le 720 ] || [ "$heartbeat_age" -le 720 ]; }; then
+              echo "Fast watcher healthy."
+              return 0
+            fi
 
-          if [ "$stale" = "1" ]; then
-            echo "Fast watcher heartbeat is stale. Cancelling stuck active runs..."
-            jq -r '.[].databaseId' <<<"$active_runs" | while read -r run_id; do
-              [ -n "$run_id" ] && gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true
+            echo "Fast watcher missing or stale: repairing now."
+
+            jq -r '.[].databaseId' <<<"$active_runs" 2>/dev/null | while read -r run_id; do
+              if [ -n "$run_id" ]; then
+                gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true
+              fi
             done
-          else
-            echo "No active Fast runner found."
-          fi
 
-          echo "Enabling safety-net workflows before restart..."
-          for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" || true
+            # Keep critical source coverage alive while the fresh Fast runner
+            # installs and starts. These are manual dispatches, so recovery does
+            # not depend on their cron schedules either.
+            gh workflow run youtube-backup-watch.yml \
+              --repo "$GITHUB_REPOSITORY" --ref main || true
+            gh workflow run official-website-backup.yml \
+              --repo "$GITHUB_REPOSITORY" --ref main || true
+
+            gh workflow run fast-2min-watch.yml \
+              --repo "$GITHUB_REPOSITORY" --ref main
+
+            echo "Fresh Fast runner dispatched."
+          }
+
+          # Stay alive for ~3h50m and check every five minutes. Before GitHub's
+          # long-job limits become relevant, hand off to a fresh watchdog run.
+          for cycle in $(seq 1 46); do
+            echo "--- recovery watchdog cycle $cycle/46 ---"
+            check_fast || true
+            sleep 300
           done
 
-          echo "Dispatching a fresh Fast 2-Min run..."
-          gh workflow run fast-2min-watch.yml --repo "$GITHUB_REPOSITORY" --ref main
-          echo "Self-heal restart dispatched."
+          echo "Handing recovery watchdog to a fresh run..."
+          gh workflow run fast-self-heal.yml \
+            --repo "$GITHUB_REPOSITORY" --ref main || true
