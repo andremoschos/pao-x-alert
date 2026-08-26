@@ -61,6 +61,44 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
+      - name: Preflight resilient runner
+        run: |
+          python -m py_compile \
+            fast_runner_v2.py \
+            monitor.py \
+            panathinaikos_monitor.py \
+            google_monitor.py \
+            official_monitor.py \
+            official_x_direct_monitor.py \
+            youtube_monitor.py
+
+      - name: Retire legacy safety workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
+            state="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" --jq '.state')"
+            if [ "$state" = "active" ]; then
+              gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/disable"
+              echo "$wf disabled; resilient Fast runner is ready"
+            else
+              echo "$wf already $state"
+            fi
+          done
+
       - name: Run resilient 2-minute PAO watchers
         shell: bash
         run: python fast_runner_v2.py
+
+      - name: Restore legacy safety if Fast exits with failure
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          echo "Fast failed; restoring legacy safety workflows."
+          for wf in watch.yml google-watch.yml official-watch.yml youtube-watch.yml; do
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" || true
+          done
