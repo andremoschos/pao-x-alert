@@ -13,8 +13,18 @@ from playwright.async_api import async_playwright
 
 STATE = Path("panathinaikos_seen.json")
 ENGINE = "twscrape_panathinaikos_only_v1"
-MAX_SEEN = 2000
-QUERY = "panathinaikos"
+MAX_SEEN = 5000
+
+# X occasionally returns an empty SearchTimeline for the bare lowercase term
+# even while the Latest tab visibly contains results. Try an explicit exact/
+# hashtag query first, then two compact fallbacks before using Chromium.
+SEARCH_QUERIES = [
+    '"Panathinaikos" OR #Panathinaikos',
+    'Panathinaikos',
+    '#Panathinaikos',
+]
+FETCH_LIMIT = 40
+FRESH_MINUTES = 120
 
 AUTH = os.environ["X_AUTH_TOKEN"]
 CT0 = os.environ["X_CT0"]
@@ -88,35 +98,93 @@ def notify(tweet):
     raise RuntimeError("ntfy delivery failed after retries")
 
 
+def _tweet_from_result(t):
+    tid = str(t.id)
+    username = getattr(getattr(t, "user", None), "username", "") or "unknown"
+    text = (getattr(t, "rawContent", "") or "").strip() or "(post without text)"
+    return {
+        "id": tid,
+        "author": f"@{username}",
+        "text": text,
+        "url": f"https://x.com/{username}/status/{tid}",
+        "created": snowflake_datetime(int(tid)),
+    }
+
+
 async def fetch_latest_twscrape():
     db = "/tmp/twscrape_panathinaikos_accounts.db"
     Path(db).unlink(missing_ok=True)
     api = API(db, raise_when_no_account=True, wait_timeout=12, wait_interval=1)
     cookie_header = f"auth_token={AUTH}; ct0={CT0}"
     await api.pool.add_account_cookies("newspao_panathinaikos", cookie_header)
-    results = await gather(api.search(QUERY, limit=100))
 
-    tweets = []
-    seen_now = set()
-    for t in results:
-        tid = str(t.id)
-        if tid in seen_now:
+    found = {}
+    errors = []
+
+    for index, query in enumerate(SEARCH_QUERIES):
+        try:
+            results = await gather(api.search(query, limit=FETCH_LIMIT))
+        except Exception as exc:
+            errors.append(f"{query!r}: {type(exc).__name__}: {exc}")
             continue
-        seen_now.add(tid)
-        username = getattr(getattr(t, "user", None), "username", "") or "unknown"
-        text = (getattr(t, "rawContent", "") or "").strip() or "(post without text)"
-        tweets.append(
-            {
+
+        for t in results:
+            tweet = _tweet_from_result(t)
+            found[tweet["id"]] = tweet
+
+        print(
+            f"Panathinaikos twscrape query {query!r}: {len(results)} results",
+            flush=True,
+        )
+
+        # The first explicit query is enough when healthy. Only spend extra X
+        # requests when the prior attempt actually returned nothing.
+        if found:
+            break
+
+        if index < len(SEARCH_QUERIES) - 1:
+            await asyncio.sleep(1)
+
+    tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)
+    if not tweets:
+        detail = "; ".join(errors[-3:]) or "all queries returned 0 posts"
+        raise RuntimeError(f"twscrape Panathinaikos search empty: {detail}")
+    return tweets
+
+
+async def _browser_query(page, query):
+    url = f"https://x.com/search?q={quote(query)}&src=typed_query&f=live"
+    await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+    await page.wait_for_timeout(6000)
+
+    articles = page.locator("article")
+    count = min(await articles.count(), 40)
+    found = {}
+
+    for i in range(count):
+        article = articles.nth(i)
+        try:
+            text = " ".join((await article.inner_text(timeout=3000)).split()).strip()
+        except Exception:
+            text = ""
+
+        links = article.locator('a[href*="/status/"]')
+        for j in range(min(await links.count(), 20)):
+            href = (await links.nth(j).get_attribute("href") or "").strip()
+            match = re.match(r"^/([^/]+)/status/(\d+)", href)
+            if not match:
+                continue
+            username, tid = match.group(1), match.group(2)
+            found[tid] = {
                 "id": tid,
                 "author": f"@{username}",
-                "text": text,
+                "text": text or "(post without text)",
                 "url": f"https://x.com/{username}/status/{tid}",
                 "created": snowflake_datetime(int(tid)),
             }
-        )
-    if not tweets:
-        raise RuntimeError("twscrape Panathinaikos search returned 0 posts")
-    return tweets
+            break
+
+    return sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)
 
 
 async def fetch_latest_browser():
@@ -139,40 +207,15 @@ async def fetch_latest_browser():
         )
         page = await context.new_page()
         try:
-            url = f"https://x.com/search?q={quote(QUERY)}&src=typed_query&f=live"
-            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            await page.wait_for_timeout(6000)
-            articles = page.locator("article")
-            count = min(await articles.count(), 40)
-            found = {}
-
-            for i in range(count):
-                article = articles.nth(i)
-                try:
-                    text = " ".join((await article.inner_text(timeout=3000)).split()).strip()
-                except Exception:
-                    text = ""
-                links = article.locator('a[href*="/status/"]')
-                for j in range(min(await links.count(), 20)):
-                    href = (await links.nth(j).get_attribute("href") or "").strip()
-                    match = re.match(r"^/([^/]+)/status/(\d+)", href)
-                    if not match:
-                        continue
-                    username, tid = match.group(1), match.group(2)
-                    found[tid] = {
-                        "id": tid,
-                        "author": f"@{username}",
-                        "text": text or "(post without text)",
-                        "url": f"https://x.com/{username}/status/{tid}",
-                        "created": snowflake_datetime(int(tid)),
-                    }
-                    break
-
-            tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)
-            if not tweets:
-                raise RuntimeError("Chromium Panathinaikos search returned 0 posts")
-            print(f"Panathinaikos browser fallback results: {len(tweets)}", flush=True)
-            return tweets
+            for query in SEARCH_QUERIES:
+                tweets = await _browser_query(page, query)
+                print(
+                    f"Panathinaikos Chromium query {query!r}: {len(tweets)} results",
+                    flush=True,
+                )
+                if tweets:
+                    return tweets
+            raise RuntimeError("Chromium Panathinaikos search returned 0 posts for all recovery queries")
         finally:
             await browser.close()
 
@@ -200,7 +243,7 @@ async def main():
         print(f"Panathinaikos baseline saved: {len(tweets)} posts")
         return
 
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=45)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=FRESH_MINUTES)
     fresh = [t for t in tweets if t["id"] not in previous and t["created"] >= cutoff]
     fresh.sort(key=lambda x: x["created"])
 
@@ -209,6 +252,8 @@ async def main():
         previous.add(t["id"])
         print("Sent:", t["url"])
 
+    # Keep every result in state after this cycle. The 2-hour recovery window
+    # protects delayed indexing, while persistent IDs prevent duplicates.
     previous.update(t["id"] for t in tweets)
     save_state(previous)
     print(f"Fresh Panathinaikos posts: {len(fresh)}")
