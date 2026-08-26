@@ -167,5 +167,41 @@
       "updatedAt": "2026-08-26T10:08:46Z",
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
-  ]
+  ],
+  "cycle": 1,
+  "runner_started_or_alive_at": "2026-08-26T22:47:00.948260+00:00",
+  "components": {
+    "x_general": {
+      "status": "ok",
+      "last_ok": "2026-08-26T22:47:04.681671+00:00",
+      "last_error": null,
+      "last_duration_seconds": 3.73
+    },
+    "only_panathinaikos_x": {
+      "status": "error",
+      "last_attempt": "2026-08-26T22:47:04.681706+00:00",
+      "last_error": "RuntimeError: Chromium Panathinaikos search returned 0 posts",
+      "last_duration_seconds": 21.6
+    },
+    "google_news_web": {
+      "status": "ok",
+      "last_ok": "2026-08-26T22:47:33.120103+00:00",
+      "last_error": null,
+      "last_duration_seconds": 6.84
+    },
+    "official_pao": {
+      "status": "ok",
+      "last_ok": "2026-08-26T22:49:35.324058+00:00",
+      "last_error": null,
+      "last_duration_seconds": 122.2
+    },
+    "youtube_pao": {
+      "status": "ok",
+      "last_ok": "2026-08-26T22:49:35.324998+00:00",
+      "last_error": null,
+      "last_duration_seconds": 0.0
+    }
+  },
+  "last_cycle_finished_at": "2026-08-26T22:49:35.325023+00:00",
+  "last_cycle_duration_seconds": 154.38
 }
