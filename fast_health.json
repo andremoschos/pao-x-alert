@@ -168,40 +168,41 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 1,
-  "runner_started_or_alive_at": "2026-08-26T22:47:00.948260+00:00",
+  "cycle": 2,
+  "runner_started_or_alive_at": "2026-08-26T22:49:42.523450+00:00",
   "components": {
     "x_general": {
-      "status": "ok",
+      "status": "error",
       "last_ok": "2026-08-26T22:47:04.681671+00:00",
-      "last_error": null,
-      "last_duration_seconds": 3.73
+      "last_error": "RuntimeError: Chromium X search returned 0 posts",
+      "last_duration_seconds": 7.2,
+      "last_attempt": "2026-08-26T22:49:42.523518+00:00"
     },
     "only_panathinaikos_x": {
       "status": "error",
-      "last_attempt": "2026-08-26T22:47:04.681706+00:00",
+      "last_attempt": "2026-08-26T22:49:49.728469+00:00",
       "last_error": "RuntimeError: Chromium Panathinaikos search returned 0 posts",
-      "last_duration_seconds": 21.6
+      "last_duration_seconds": 7.16
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-26T22:47:33.120103+00:00",
+      "last_ok": "2026-08-26T22:50:04.151967+00:00",
       "last_error": null,
-      "last_duration_seconds": 6.84
+      "last_duration_seconds": 7.26
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-26T22:49:35.324058+00:00",
+      "last_ok": "2026-08-26T22:50:51.697057+00:00",
       "last_error": null,
-      "last_duration_seconds": 122.2
+      "last_duration_seconds": 47.55
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-26T22:49:35.324998+00:00",
+      "last_ok": "2026-08-26T22:50:51.698086+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0
     }
   },
-  "last_cycle_finished_at": "2026-08-26T22:49:35.325023+00:00",
-  "last_cycle_duration_seconds": 154.38
+  "last_cycle_finished_at": "2026-08-26T22:50:51.698113+00:00",
+  "last_cycle_duration_seconds": 69.17
 }
