@@ -117,6 +117,14 @@ DIRECT_TELEGRAM_DOMAINS = {
     "24sports.com.cy",
 }
 
+# Direct sources that share a broad parent domain with unrelated publishers.
+# Keep these path-specific so, for example, NYTimes stories are not suppressed
+# just because The Athletic now lives under nytimes.com/athletic/.
+DIRECT_TELEGRAM_URL_PREFIXES = (
+    "https://www.nytimes.com/athletic/",
+    "https://nytimes.com/athletic/",
+)
+
 
 TERMS = [
     "panathinaikos",
@@ -254,6 +262,11 @@ def direct_source_domain(entry):
     ]
 
     for candidate in candidates:
+        unwrapped = unwrap_google_url(candidate)
+        lowered = (unwrapped or "").lower()
+        if any(lowered.startswith(prefix) for prefix in DIRECT_TELEGRAM_URL_PREFIXES):
+            return "nytimes.com/athletic"
+
         host = canonical_host(candidate)
         if host_matches_direct_domain(host):
             for domain in DIRECT_TELEGRAM_DOMAINS:
