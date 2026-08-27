@@ -14,6 +14,7 @@ from playwright.async_api import async_playwright
 STATE = Path("panathinaikos_seen.json")
 ENGINE = "twscrape_panathinaikos_only_v1"
 MAX_SEEN = 5000
+MAX_NTFY_BODY_BYTES = 3500
 
 # X occasionally returns an empty SearchTimeline for the bare lowercase term
 # even while the Latest tab visibly contains results. Try an explicit exact/
@@ -60,18 +61,44 @@ def snowflake_datetime(tweet_id: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
 
 
-def notify(tweet):
+def _format_tweet(tweet):
+    text = tweet["text"]
+    if len(text) > 700:
+        text = text[:697] + "..."
+    return f'{tweet["author"]}\n{text}\n{tweet["url"]}'
+
+
+def _tweet_batches(tweets):
+    batches = []
+    current = []
+
+    for tweet in tweets:
+        candidate = current + [tweet]
+        body = "\n\n---\n\n".join(_format_tweet(item) for item in candidate)
+        if current and len(body.encode("utf-8")) > MAX_NTFY_BODY_BYTES:
+            batches.append(current)
+            current = [tweet]
+        else:
+            current = candidate
+
+    if current:
+        batches.append(current)
+    return batches
+
+
+def notify_batch(tweets):
     url = f"https://ntfy.sh/{TOPIC}"
+    count = len(tweets)
     headers = {
-        "Title": "X PANATHINAIKOS",
+        "Title": "X PANATHINAIKOS" if count == 1 else f"X PANATHINAIKOS - {count} NEW POSTS",
         "Priority": "high",
         "Tags": "mag",
-        "Click": tweet["url"],
+        "Click": tweets[-1]["url"],
     }
-    body = f'{tweet["author"]}\n{tweet["text"]}\n{tweet["url"]}'
+    body = "\n\n---\n\n".join(_format_tweet(tweet) for tweet in tweets)
 
-    # The Fast runner owns ntfy pacing/retries globally. Keep exactly one send
-    # here so a 429 cannot be amplified by a second nested retry loop.
+    # One ntfy publication can carry multiple discoveries from the same cycle.
+    # This keeps the 2-minute detection speed while protecting the daily quota.
     r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
     r.raise_for_status()
 
@@ -225,10 +252,12 @@ async def main():
     fresh = [t for t in tweets if t["id"] not in previous and t["created"] >= cutoff]
     fresh.sort(key=lambda x: x["created"])
 
-    for t in fresh:
-        notify(t)
-        previous.add(t["id"])
-        print("Sent:", t["url"])
+    for batch in _tweet_batches(fresh):
+        notify_batch(batch)
+        for tweet in batch:
+            previous.add(tweet["id"])
+            print("Sent:", tweet["url"])
+        print(f"Only Panathinaikos X ntfy batch sent: {len(batch)} posts", flush=True)
 
     # Keep every result in state after this cycle. The 2-hour recovery window
     # protects delayed indexing, while persistent IDs prevent duplicates.
