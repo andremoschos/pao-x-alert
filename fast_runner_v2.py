@@ -18,7 +18,7 @@ import youtube_monitor as youtube
 POLL_SECONDS = 120
 HEALTH = Path("fast_health.json")
 NTFY_BUDGET = Path("ntfy_budget.json")
-NTFY_LOCAL_DAILY_BUDGET = 200
+NTFY_LOCAL_DAILY_BUDGET = 225
 STATE_FILES = [
     "seen.json",
     "panathinaikos_seen.json",
