@@ -6,28 +6,90 @@ import google_monitor as google
 MAX_WORKERS = 6
 CONNECT_TIMEOUT_SECONDS = 4
 READ_TIMEOUT_SECONDS = 12
-FAST_MAX_SEND_PER_RUN = 4
+FAST_MAX_SEND_PER_RUN = 16
+MAX_NTFY_BODY_BYTES = 3500
+
+
+def _format_entry(entry):
+    title = entry.get("title") or "(χωρίς τίτλο)"
+    if len(title) > 600:
+        title = title[:597] + "..."
+
+    lines = [title]
+    if entry.get("publisher"):
+        lines.append(f"Πηγή: {entry['publisher']}")
+    if entry.get("source") == "NEWS":
+        lines.append(f"Google News edition: {entry.get('edition', '')}")
+    if entry.get("url"):
+        lines.append(entry["url"])
+    return "\n".join(lines)
+
+
+def _entry_batches(entries):
+    batches = []
+    current = []
+    for entry in entries:
+        candidate = current + [entry]
+        body = "\n\n---\n\n".join(_format_entry(item) for item in candidate)
+        if current and len(body.encode("utf-8")) > MAX_NTFY_BODY_BYTES:
+            batches.append(current)
+            current = [entry]
+        else:
+            current = candidate
+    if current:
+        batches.append(current)
+    return batches
+
+
+def _send_batch(entries):
+    source = entries[0].get("source") or "NEWS"
+    count = len(entries)
+    if source == "NEWS":
+        title = "NEO GOOGLE NEWS: PANATHINAIKOS"
+        tags = "newspaper"
+    else:
+        title = "NEO GOOGLE WEB: PANATHINAIKOS"
+        tags = "mag"
+
+    if count > 1:
+        title = f"{title} - {count} NEA"
+
+    headers = {
+        "Title": title,
+        "Priority": "high",
+        "Tags": tags,
+    }
+    if entries[-1].get("url"):
+        headers["Click"] = entries[-1]["url"]
+
+    body = "\n\n---\n\n".join(_format_entry(entry) for entry in entries)
+    response = google.requests.post(
+        f"https://ntfy.sh/{google.TOPIC}",
+        data=body.encode("utf-8"),
+        headers=headers,
+        timeout=20,
+    )
+    response.raise_for_status()
 
 
 def main():
-    """Run the existing Google monitor logic without letting it stall Fast.
+    """Run Google discovery fast, then batch ntfy publications safely.
 
-    The original google_monitor.main() still owns filtering, dedupe, freshness,
-    direct-source suppression, ntfy retry/pacing and state semantics. This
-    adapter changes only two Fast-runner concerns:
-
-    1. Google Alerts + Google News editions are prefetched concurrently with
-       bounded network timeouts.
-    2. At most a small number of Google notifications are delivered per Fast
-       cycle. Unsent recent entries are NOT marked seen by google_monitor, so
-       they remain pending and are delivered on following cycles rather than
-       being lost. This prevents ntfy's visitor-wide pacing from turning one
-       Google burst into a 90+ second blocker for every other PAO watcher.
+    Google keeps its filtering, dedupe and freshness rules. During google.main()
+    we temporarily queue notification candidates and defer the state write. Only
+    IDs belonging to batches that ntfy actually accepts are persisted as seen;
+    failed/blocked entries stay pending for a later Fast cycle.
     """
     original_get = google.requests.get
     original_web_fetch = google.fetch_web_alert
     original_news_fetch = google.fetch_google_news_edition
+    original_notify = google.notify
+    original_save_state = google.save_state
     original_max_send = google.MAX_SEND_PER_RUN
+    original_send_gap = google.SEND_GAP_SECONDS
+
+    initial_state = google.load_state()
+    initial_seen = set(initial_state.get("ids", set()))
 
     def bounded_get(url, *args, **kwargs):
         kwargs["timeout"] = (CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS)
@@ -80,12 +142,59 @@ def main():
             return value
         raise value
 
+    queued = []
+    captured_seen = None
+
+    def queue_notify(entry):
+        queued.append(entry)
+        return True
+
+    def defer_save_state(ids):
+        nonlocal captured_seen
+        captured_seen = set(ids)
+
     google.fetch_web_alert = cached_web_fetch
     google.fetch_google_news_edition = cached_news_fetch
+    google.notify = queue_notify
+    google.save_state = defer_save_state
     google.MAX_SEND_PER_RUN = FAST_MAX_SEND_PER_RUN
+    google.SEND_GAP_SECONDS = 0
+
     try:
-        return google.main()
+        google.main()
     finally:
         google.fetch_web_alert = original_web_fetch
         google.fetch_google_news_edition = original_news_fetch
+        google.notify = original_notify
+        google.save_state = original_save_state
         google.MAX_SEND_PER_RUN = original_max_send
+        google.SEND_GAP_SECONDS = original_send_gap
+
+    if captured_seen is None:
+        return
+
+    queued_ids = {entry["id"] for entry in queued}
+    base_seen = set(captured_seen) - queued_ids
+    delivered_ids = set()
+
+    try:
+        # Preserve Google NEWS/WEB titles and tags while batching each class.
+        for source in ("NEWS", "WEB"):
+            group = [entry for entry in queued if entry.get("source") == source]
+            for batch in _entry_batches(group):
+                _send_batch(batch)
+                batch_ids = {entry["id"] for entry in batch}
+                delivered_ids.update(batch_ids)
+                original_save_state(base_seen | delivered_ids)
+                print(f"Google ntfy batch sent: source={source} items={len(batch)}")
+    except Exception:
+        # Keep only successful deliveries + non-notification state changes.
+        original_save_state(base_seen | delivered_ids)
+        raise
+
+    original_save_state(base_seen | delivered_ids)
+    pending = len(queued_ids - delivered_ids)
+    print(
+        f"Google batched delivery complete: queued={len(queued)}, "
+        f"delivered={len(delivered_ids)}, pending={pending}"
+    )
