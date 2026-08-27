@@ -27,17 +27,19 @@ STATE_FILES = [
 ]
 
 # ntfy.sh applies visitor/IP rate limits. All watcher modules share this same
-# requests module object, so a single wrapper can pace ALL ntfy traffic from the
-# Fast runner instead of allowing X/Official/YouTube bursts to collide.
+# requests module object, so one wrapper paces ALL ntfy traffic from the Fast
+# runner and stops every component from piling onto a visitor-wide 429.
 _ORIGINAL_REQUESTS_POST = requests.post
-_NTFY_MIN_GAP_SECONDS = 3.0
-_NTFY_MAX_ATTEMPTS = 3
-_NTFY_MAX_COOLDOWN_SECONDS = 25.0
+_NTFY_MIN_GAP_SECONDS = 5.0
+_NTFY_CIRCUIT_MIN_SECONDS = 60.0
+_NTFY_CIRCUIT_MAX_SECONDS = 180.0
 _last_ntfy_request_at = 0.0
+_ntfy_blocked_until = 0.0
+_ntfy_blocked_headers = {}
 
 
-def _rate_limit_delay(response, attempt):
-    """Return a safe cooldown using every reset hint ntfy/proxies may expose."""
+def _rate_limit_delay(response):
+    """Return cooldown seconds using reset hints ntfy/proxies may expose."""
     now = time.time()
 
     retry_after = response.headers.get("Retry-After", "").strip()
@@ -59,57 +61,69 @@ def _rate_limit_delay(response, attempt):
             continue
         try:
             value = float(raw)
-            # Most reset headers are Unix timestamps; small values are seconds.
             if value > now - 60:
                 return max(1.0, value - now)
             return max(1.0, value)
         except Exception:
             pass
 
-    return min(20.0, 6.0 * (2 ** (attempt - 1)))
+    return _NTFY_CIRCUIT_MIN_SECONDS
+
+
+def _synthetic_429(url):
+    """Return a local 429 without touching ntfy while the circuit is open."""
+    response = requests.Response()
+    response.status_code = 429
+    response.reason = "Too Many Requests"
+    response.url = str(url)
+    response.headers.update(_ntfy_blocked_headers)
+    response._content = b"ntfy circuit breaker open"
+    return response
 
 
 def resilient_post(url, *args, **kwargs):
     global _last_ntfy_request_at
+    global _ntfy_blocked_until
+    global _ntfy_blocked_headers
 
     if not str(url).startswith("https://ntfy.sh/"):
         return _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
 
-    response = None
-    for attempt in range(1, _NTFY_MAX_ATTEMPTS + 1):
-        # Keep a visitor-wide floor between sends. This is intentionally shared
-        # across every topic/component in this Python process.
-        since_last = time.monotonic() - _last_ntfy_request_at
-        if since_last < _NTFY_MIN_GAP_SECONDS:
-            time.sleep(_NTFY_MIN_GAP_SECONDS - since_last)
-
-        response = _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
-        _last_ntfy_request_at = time.monotonic()
-
-        if response.status_code != 429:
-            return response
-
-        # Never let an ntfy cooldown freeze the whole PAO runner for many
-        # minutes. If the last retry is still rate-limited, return the 429 so
-        # the component records an error and the undelivered item retries next
-        # cycle instead of blocking every other watcher.
-        if attempt >= _NTFY_MAX_ATTEMPTS:
-            print(
-                f"ntfy 429 for {url}; retry budget exhausted, "
-                "leaving item pending for the next cycle",
-                flush=True,
-            )
-            return response
-
-        delay = _rate_limit_delay(response, attempt)
-        delay = max(3.0, min(delay, _NTFY_MAX_COOLDOWN_SECONDS))
+    now_mono = time.monotonic()
+    if now_mono < _ntfy_blocked_until:
+        remaining = _ntfy_blocked_until - now_mono
         print(
-            f"ntfy 429 for {url}; bounded visitor-wide cooldown {delay:.1f}s "
-            f"(attempt {attempt}/{_NTFY_MAX_ATTEMPTS})",
+            f"ntfy circuit open; skipping network send to {url} "
+            f"for another {remaining:.1f}s",
             flush=True,
         )
-        time.sleep(delay)
+        return _synthetic_429(url)
 
+    since_last = now_mono - _last_ntfy_request_at
+    if since_last < _NTFY_MIN_GAP_SECONDS:
+        time.sleep(_NTFY_MIN_GAP_SECONDS - since_last)
+
+    response = _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
+    _last_ntfy_request_at = time.monotonic()
+
+    if response.status_code != 429:
+        _ntfy_blocked_until = 0.0
+        _ntfy_blocked_headers = {}
+        return response
+
+    hinted_delay = _rate_limit_delay(response)
+    cooldown = max(
+        _NTFY_CIRCUIT_MIN_SECONDS,
+        min(hinted_delay, _NTFY_CIRCUIT_MAX_SECONDS),
+    )
+    _ntfy_blocked_until = time.monotonic() + cooldown
+    _ntfy_blocked_headers = dict(response.headers)
+    print(
+        f"ntfy 429 for {url}; circuit opened for {cooldown:.1f}s. "
+        "No more ntfy network requests will be made during this cooldown; "
+        "undelivered items remain pending for a later cycle.",
+        flush=True,
+    )
     return response
 
 
