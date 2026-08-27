@@ -168,42 +168,43 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 340,
-  "runner_started_or_alive_at": "2026-08-27T12:03:25.177039+00:00",
+  "cycle": 341,
+  "runner_started_or_alive_at": "2026-08-27T12:07:57.270299+00:00",
   "components": {
     "x_general": {
-      "status": "ok",
+      "status": "error",
       "last_ok": "2026-08-27T12:03:33.015421+00:00",
-      "last_error": null,
-      "last_duration_seconds": 7.84,
-      "last_attempt": "2026-08-26T22:49:42.523518+00:00"
+      "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-pao-847291",
+      "last_duration_seconds": 131.35,
+      "last_attempt": "2026-08-27T12:07:57.270319+00:00"
     },
     "only_panathinaikos_x": {
       "status": "error",
-      "last_attempt": "2026-08-27T12:03:33.015454+00:00",
+      "last_attempt": "2026-08-27T12:10:08.619149+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-x-panathinaikos-583742",
-      "last_duration_seconds": 131.24,
+      "last_duration_seconds": 131.25,
       "last_ok": "2026-08-27T12:01:42.647091+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-27T12:07:05.594705+00:00",
+      "last_ok": "2026-08-27T12:13:39.039983+00:00",
       "last_error": null,
-      "last_duration_seconds": 81.34
+      "last_duration_seconds": 79.17
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-27T12:07:49.184217+00:00",
+      "last_ok": "2026-08-27T12:14:23.343512+00:00",
       "last_error": null,
-      "last_duration_seconds": 43.59
+      "last_duration_seconds": 44.3
     },
     "youtube_pao": {
-      "status": "ok",
+      "status": "error",
       "last_ok": "2026-08-27T12:07:50.601622+00:00",
-      "last_error": null,
-      "last_duration_seconds": 1.42
+      "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-youtube-pao-847291",
+      "last_duration_seconds": 18.96,
+      "last_attempt": "2026-08-27T12:14:23.343545+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-27T12:07:50.601650+00:00",
-  "last_cycle_duration_seconds": 265.42
+  "last_cycle_finished_at": "2026-08-27T12:14:42.307273+00:00",
+  "last_cycle_duration_seconds": 405.04
 }
