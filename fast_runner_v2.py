@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import subprocess
 import time
@@ -18,7 +19,9 @@ import youtube_monitor as youtube
 POLL_SECONDS = 120
 HEALTH = Path("fast_health.json")
 NTFY_BUDGET = Path("ntfy_budget.json")
+NTFY_OUTBOX = Path("ntfy_outbox.json")
 NTFY_LOCAL_DAILY_BUDGET = 249
+NTFY_OUTBOX_MAX_BODY_BYTES = 3500
 STATE_FILES = [
     "seen.json",
     "panathinaikos_seen.json",
@@ -27,6 +30,7 @@ STATE_FILES = [
     "youtube_seen.json",
     "fast_health.json",
     "ntfy_budget.json",
+    "ntfy_outbox.json",
 ]
 
 # ntfy.sh rate-limits by visitor/IP and has a hosted daily message quota. All
@@ -75,6 +79,184 @@ def _refresh_ntfy_budget_day():
     if _ntfy_budget.get("day") != current_day:
         _ntfy_budget = {"day": current_day, "count": 0}
         _save_ntfy_budget()
+
+
+def _load_ntfy_outbox():
+    try:
+        data = json.loads(NTFY_OUTBOX.read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+    except Exception:
+        pass
+    return []
+
+
+def _save_ntfy_outbox(items):
+    NTFY_OUTBOX.write_text(
+        json.dumps(items, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _request_body_text(kwargs):
+    body = kwargs.get("data", "")
+    if isinstance(body, bytes):
+        return body.decode("utf-8", errors="replace")
+    return str(body or "")
+
+
+def _queue_ntfy(url, kwargs, reason):
+    items = _load_ntfy_outbox()
+    body = _request_body_text(kwargs)
+    headers = {
+        str(k): str(v)
+        for k, v in dict(kwargs.get("headers") or {}).items()
+        if v is not None
+    }
+    signature = hashlib.sha256(
+        (str(url) + "\n" + body + "\n" + json.dumps(headers, sort_keys=True)).encode("utf-8")
+    ).hexdigest()
+
+    if not any(item.get("signature") == signature for item in items):
+        items.append(
+            {
+                "signature": signature,
+                "url": str(url),
+                "body": body,
+                "headers": headers,
+                "queued_at": datetime.now(timezone.utc).isoformat(),
+                "reason": reason,
+            }
+        )
+        _save_ntfy_outbox(items)
+        print(
+            f"ntfy queued durably ({reason}); outbox={len(items)}",
+            flush=True,
+        )
+    return len(items)
+
+
+def _accepted_response(url, reason="queued for ntfy delivery"):
+    response = requests.Response()
+    response.status_code = 202
+    response.reason = "Accepted"
+    response.url = str(url)
+    response._content = reason.encode("utf-8")
+    return response
+
+
+def _chunk_outbox_by_topic(items):
+    """Coalesce queued publications by topic without dropping message content."""
+    groups = []
+    by_url = {}
+    for item in items:
+        by_url.setdefault(item.get("url", ""), []).append(item)
+
+    for url, topic_items in by_url.items():
+        current = []
+        current_bytes = 0
+        for item in topic_items:
+            body = str(item.get("body") or "")
+            extra = len(body.encode("utf-8")) + (10 if current else 0)
+            if current and current_bytes + extra > NTFY_OUTBOX_MAX_BODY_BYTES:
+                groups.append((url, current))
+                current = []
+                current_bytes = 0
+            current.append(item)
+            current_bytes += extra
+        if current:
+            groups.append((url, current))
+    return groups
+
+
+def flush_ntfy_outbox():
+    """Deliver pending ntfy alerts when quota is available, compacting catch-up."""
+    global _last_ntfy_request_at
+    global _ntfy_blocked_until
+    global _ntfy_blocked_headers
+
+    _refresh_ntfy_budget_day()
+    items = _load_ntfy_outbox()
+    if not items:
+        return 0
+
+    if _ntfy_budget["count"] >= NTFY_LOCAL_DAILY_BUDGET:
+        return 0
+    if time.monotonic() < _ntfy_blocked_until:
+        return 0
+
+    remaining_items = list(items)
+    delivered_signatures = set()
+    publications = 0
+
+    for url, group in _chunk_outbox_by_topic(items):
+        if _ntfy_budget["count"] >= NTFY_LOCAL_DAILY_BUDGET:
+            break
+
+        bodies = [str(item.get("body") or "") for item in group]
+        body = "\n\n--- CATCH-UP ---\n\n".join(bodies)
+        latest_headers = dict(group[-1].get("headers") or {})
+        latest_headers["Title"] = (
+            latest_headers.get("Title", "PAO WATCHER")
+            if len(group) == 1
+            else f"PAO WATCHER CATCH-UP - {len(group)} ALERTS"
+        )
+        latest_headers["Tags"] = latest_headers.get("Tags", "green_circle")
+
+        since_last = time.monotonic() - _last_ntfy_request_at
+        if since_last < _NTFY_MIN_GAP_SECONDS:
+            time.sleep(_NTFY_MIN_GAP_SECONDS - since_last)
+
+        response = _ORIGINAL_REQUESTS_POST(
+            url,
+            data=body.encode("utf-8"),
+            headers=latest_headers,
+            timeout=20,
+        )
+        _last_ntfy_request_at = time.monotonic()
+
+        if 200 <= response.status_code < 300:
+            _ntfy_budget["count"] += 1
+            _save_ntfy_budget()
+            delivered_signatures.update(item.get("signature") for item in group)
+            publications += 1
+            print(
+                f"ntfy catch-up delivered: {len(group)} queued alerts in 1 publication; "
+                f"budget={_ntfy_budget['count']}/{NTFY_LOCAL_DAILY_BUDGET}",
+                flush=True,
+            )
+            continue
+
+        if response.status_code == 429:
+            daily_quota = _is_daily_quota_429(response)
+            cooldown = (
+                _seconds_until_utc_midnight()
+                if daily_quota
+                else max(
+                    _NTFY_CIRCUIT_MIN_SECONDS,
+                    min(_rate_limit_delay(response), _NTFY_CIRCUIT_MAX_SECONDS),
+                )
+            )
+            _ntfy_blocked_until = time.monotonic() + cooldown
+            _ntfy_blocked_headers = dict(response.headers)
+            _record_429(response, cooldown, daily_quota)
+            break
+
+        print(
+            f"ntfy catch-up delivery failed HTTP {response.status_code}; "
+            "queued alerts retained",
+            flush=True,
+        )
+        break
+
+    if delivered_signatures:
+        remaining_items = [
+            item for item in remaining_items
+            if item.get("signature") not in delivered_signatures
+        ]
+        _save_ntfy_outbox(remaining_items)
+
+    return publications
 
 
 def _seconds_until_utc_midnight():
@@ -171,22 +353,19 @@ def resilient_post(url, *args, **kwargs):
 
     _refresh_ntfy_budget_day()
     if _ntfy_budget["count"] >= NTFY_LOCAL_DAILY_BUDGET:
-        print(
-            f"ntfy local daily budget reached: {_ntfy_budget['count']}/"
-            f"{NTFY_LOCAL_DAILY_BUDGET}; leaving item pending",
-            flush=True,
-        )
-        return _synthetic_429(url, "local ntfy daily safety budget reached")
+        _queue_ntfy(url, kwargs, "local daily safety budget reached")
+        return _accepted_response(url, "queued: local ntfy daily safety budget reached")
 
     now_mono = time.monotonic()
     if now_mono < _ntfy_blocked_until:
         remaining = _ntfy_blocked_until - now_mono
+        _queue_ntfy(url, kwargs, "ntfy cooldown circuit open")
         print(
-            f"ntfy circuit open; skipping network send to {url} "
-            f"for another {remaining:.1f}s",
+            f"ntfy circuit open; queued delivery for {url}; "
+            f"cooldown remaining {remaining:.1f}s",
             flush=True,
         )
-        return _synthetic_429(url)
+        return _accepted_response(url, "queued while ntfy circuit is open")
 
     since_last = now_mono - _last_ntfy_request_at
     if since_last < _NTFY_MIN_GAP_SECONDS:
@@ -218,21 +397,17 @@ def resilient_post(url, *args, **kwargs):
     _ntfy_blocked_until = time.monotonic() + cooldown
     _ntfy_blocked_headers = dict(response.headers)
     _record_429(response, cooldown, daily_quota)
+    _queue_ntfy(
+        url,
+        kwargs,
+        "hosted daily quota" if daily_quota else "temporary ntfy rate limit",
+    )
 
-    if daily_quota:
-        print(
-            f"ntfy daily quota 429 for {url}; circuit open until the next "
-            f"UTC quota reset ({cooldown:.0f}s). Pending items are preserved.",
-            flush=True,
-        )
-    else:
-        print(
-            f"ntfy 429 for {url}; circuit opened for {cooldown:.1f}s. "
-            "No more ntfy network requests will be made during this cooldown; "
-            "undelivered items remain pending for a later cycle.",
-            flush=True,
-        )
-    return response
+    print(
+        f"ntfy 429 converted to durable queued delivery; cooldown={cooldown:.1f}s",
+        flush=True,
+    )
+    return _accepted_response(url, "queued after ntfy 429")
 
 
 requests.post = resilient_post
@@ -269,6 +444,7 @@ def ntfy_health_snapshot():
             max(0.0, _ntfy_blocked_until - time.monotonic()), 1
         ),
         "last_429": _ntfy_last_429,
+        "outbox_pending": len(_load_ntfy_outbox()),
     }
 
 
@@ -362,6 +538,13 @@ async def main():
         started = time.time()
         health["cycle"] = cycle
         health["runner_started_or_alive_at"] = now_iso()
+
+        try:
+            flushed = flush_ntfy_outbox()
+            if flushed:
+                print(f"ntfy outbox flush publications={flushed}", flush=True)
+        except Exception as exc:
+            print(f"NTFY OUTBOX FLUSH ERROR: {type(exc).__name__}: {exc}", flush=True)
 
         await run_component("x_general", x_general.main, health)
         await run_component("only_panathinaikos_x", only_x.main, health)
