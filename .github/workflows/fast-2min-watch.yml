@@ -12,6 +12,7 @@ on:
       - "monitor.py"
       - "panathinaikos_monitor.py"
       - "google_monitor.py"
+      - "google_fast_adapter.py"
       - "official_monitor.py"
       - "official_x_direct_monitor.py"
       - "youtube_monitor.py"
@@ -68,6 +69,7 @@ jobs:
             monitor.py \
             panathinaikos_monitor.py \
             google_monitor.py \
+            google_fast_adapter.py \
             official_monitor.py \
             official_x_direct_monitor.py \
             youtube_monitor.py
