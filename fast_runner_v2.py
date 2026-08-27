@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 
-import google_monitor as google
+import google_fast_adapter as google
 import monitor as x_general
 import official_monitor as official
 import official_x_direct_monitor as official_x_direct
