@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/google-watch.yml"
       - "google_monitor.py"
+      - "google_fast_adapter.py"
   schedule:
     - cron: "1-59/5 * * * *"
 
@@ -37,7 +38,7 @@ jobs:
         env:
           GOOGLE_ALERT_RSS: ${{ secrets.GOOGLE_ALERT_RSS }}
           NTFY_GOOGLE_TOPIC: ${{ secrets.NTFY_GOOGLE_TOPIC }}
-        run: python google_monitor.py
+        run: python google_fast_adapter.py
 
       - name: Save Google seen items
         if: success()
