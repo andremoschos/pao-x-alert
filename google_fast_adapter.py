@@ -78,7 +78,7 @@ def main():
     Google keeps its filtering, dedupe and freshness rules. During google.main()
     we temporarily queue notification candidates and defer the state write. Only
     IDs belonging to batches that ntfy actually accepts are persisted as seen;
-    failed/blocked entries stay pending for a later Fast cycle.
+    failed/blocked entries stay pending for a later cycle.
     """
     original_get = google.requests.get
     original_web_fetch = google.fetch_web_alert
@@ -87,9 +87,6 @@ def main():
     original_save_state = google.save_state
     original_max_send = google.MAX_SEND_PER_RUN
     original_send_gap = google.SEND_GAP_SECONDS
-
-    initial_state = google.load_state()
-    initial_seen = set(initial_state.get("ids", set()))
 
     def bounded_get(url, *args, **kwargs):
         kwargs["timeout"] = (CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS)
@@ -178,7 +175,6 @@ def main():
     delivered_ids = set()
 
     try:
-        # Preserve Google NEWS/WEB titles and tags while batching each class.
         for source in ("NEWS", "WEB"):
             group = [entry for entry in queued if entry.get("source") == source]
             for batch in _entry_batches(group):
@@ -188,7 +184,6 @@ def main():
                 original_save_state(base_seen | delivered_ids)
                 print(f"Google ntfy batch sent: source={source} items={len(batch)}")
     except Exception:
-        # Keep only successful deliveries + non-notification state changes.
         original_save_state(base_seen | delivered_ids)
         raise
 
@@ -198,3 +193,7 @@ def main():
         f"Google batched delivery complete: queued={len(queued)}, "
         f"delivered={len(delivered_ids)}, pending={pending}"
     )
+
+
+if __name__ == "__main__":
+    main()
