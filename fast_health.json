@@ -168,43 +168,43 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 531,
-  "runner_started_or_alive_at": "2026-08-27T19:25:15.614665+00:00",
+  "cycle": 532,
+  "runner_started_or_alive_at": "2026-08-27T19:28:57.855443+00:00",
   "components": {
     "x_general": {
       "status": "error",
       "last_ok": "2026-08-27T18:56:34.957566+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-pao-847291",
-      "last_duration_seconds": 25.94,
-      "last_attempt": "2026-08-27T19:25:15.614685+00:00"
+      "last_duration_seconds": 26.01,
+      "last_attempt": "2026-08-27T19:28:57.855464+00:00"
     },
     "only_panathinaikos_x": {
       "status": "error",
-      "last_attempt": "2026-08-27T19:25:41.550863+00:00",
+      "last_attempt": "2026-08-27T19:29:23.870582+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-x-panathinaikos-583742",
-      "last_duration_seconds": 25.86,
+      "last_duration_seconds": 25.81,
       "last_ok": "2026-08-27T18:56:52.085845+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-27T19:27:28.548344+00:00",
+      "last_ok": "2026-08-27T19:31:11.036029+00:00",
       "last_error": null,
-      "last_duration_seconds": 81.13
+      "last_duration_seconds": 81.35
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-27T19:28:31.784287+00:00",
+      "last_ok": "2026-08-27T19:32:15.236150+00:00",
       "last_error": null,
-      "last_duration_seconds": 63.24
+      "last_duration_seconds": 64.2
     },
     "youtube_pao": {
       "status": "error",
       "last_ok": "2026-08-27T19:21:25.061834+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-youtube-pao-847291",
-      "last_duration_seconds": 19.08,
-      "last_attempt": "2026-08-27T19:28:31.784320+00:00"
+      "last_duration_seconds": 19.17,
+      "last_attempt": "2026-08-27T19:32:15.236185+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-27T19:28:50.862570+00:00",
-  "last_cycle_duration_seconds": 215.25
+  "last_cycle_finished_at": "2026-08-27T19:32:34.410133+00:00",
+  "last_cycle_duration_seconds": 216.55
 }
