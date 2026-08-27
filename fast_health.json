@@ -168,46 +168,46 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 593,
-  "runner_started_or_alive_at": "2026-08-27T21:47:15.191587+00:00",
+  "cycle": 594,
+  "runner_started_or_alive_at": "2026-08-27T21:49:15.245299+00:00",
   "components": {
     "x_general": {
       "status": "error",
       "last_ok": "2026-08-27T21:37:22.540201+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-pao-847291",
-      "last_duration_seconds": 7.3,
-      "last_attempt": "2026-08-27T21:47:15.191611+00:00"
+      "last_duration_seconds": 7.23,
+      "last_attempt": "2026-08-27T21:49:15.245323+00:00"
     },
     "only_panathinaikos_x": {
       "status": "error",
-      "last_attempt": "2026-08-27T21:47:22.488731+00:00",
+      "last_attempt": "2026-08-27T21:49:22.479227+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-x-panathinaikos-583742",
-      "last_duration_seconds": 7.23,
+      "last_duration_seconds": 7.25,
       "last_ok": "2026-08-27T21:37:30.065813+00:00"
     },
     "google_news_web": {
       "status": "error",
       "last_ok": "2026-08-27T21:39:29.873604+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-google-pao-847291",
-      "last_duration_seconds": 0.65,
-      "last_attempt": "2026-08-27T21:47:29.714134+00:00"
+      "last_duration_seconds": 1.01,
+      "last_attempt": "2026-08-27T21:49:29.724442+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-27T21:48:16.763298+00:00",
+      "last_ok": "2026-08-27T21:50:15.623350+00:00",
       "last_error": null,
-      "last_duration_seconds": 46.4
+      "last_duration_seconds": 44.89
     },
     "youtube_pao": {
       "status": "error",
       "last_ok": "2026-08-27T21:38:17.267479+00:00",
       "last_error": "HTTPError: 429 Client Error: Too Many Requests for url: https://ntfy.sh/newspao-youtube-pao-847291",
-      "last_duration_seconds": 0.4,
-      "last_attempt": "2026-08-27T21:48:16.763331+00:00"
+      "last_duration_seconds": 0.41,
+      "last_attempt": "2026-08-27T21:50:15.623387+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-27T21:48:17.160013+00:00",
-  "last_cycle_duration_seconds": 61.97,
+  "last_cycle_finished_at": "2026-08-27T21:50:16.037930+00:00",
+  "last_cycle_duration_seconds": 60.79,
   "ntfy": {
     "local_budget_day_utc": "2026-08-27",
     "local_successful_publications": 200,
