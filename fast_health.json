@@ -168,43 +168,43 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 346,
-  "runner_started_or_alive_at": "2026-08-27T12:30:24.973536+00:00",
+  "cycle": 347,
+  "runner_started_or_alive_at": "2026-08-27T12:32:24.983505+00:00",
   "components": {
     "x_general": {
       "status": "error",
       "last_ok": "2026-08-27T12:03:33.015421+00:00",
-      "last_error": "ConnectionError: HTTPSConnectionPool(host='ntfy.sh', port=443): Max retries exceeded with url: /newspao-pao-847291 (Caused by NewConnectionError(\"HTTPSConnection(host='ntfy.sh', port=443): Failed to establish a new connection: [Errno 101] Network is unreachable\"))",
-      "last_duration_seconds": 27.19,
-      "last_attempt": "2026-08-27T12:30:24.973556+00:00"
+      "last_error": "ReadTimeout: HTTPSConnectionPool(host='ntfy.sh', port=443): Read timed out. (read timeout=20)",
+      "last_duration_seconds": 27.42,
+      "last_attempt": "2026-08-27T12:32:24.983526+00:00"
     },
     "only_panathinaikos_x": {
       "status": "ok",
       "last_attempt": "2026-08-27T12:28:45.761279+00:00",
       "last_error": null,
-      "last_duration_seconds": 37.58,
-      "last_ok": "2026-08-27T12:31:29.745446+00:00"
+      "last_duration_seconds": 7.02,
+      "last_ok": "2026-08-27T12:32:59.425730+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-27T12:31:31.259398+00:00",
+      "last_ok": "2026-08-27T12:33:00.888092+00:00",
       "last_error": null,
-      "last_duration_seconds": 1.51
+      "last_duration_seconds": 1.46
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-27T12:32:15.061135+00:00",
+      "last_ok": "2026-08-27T12:33:45.075243+00:00",
       "last_error": null,
-      "last_duration_seconds": 43.8
+      "last_duration_seconds": 44.19
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-27T12:32:15.062103+00:00",
+      "last_ok": "2026-08-27T12:33:45.076183+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-27T12:21:15.947476+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-27T12:32:15.062125+00:00",
-  "last_cycle_duration_seconds": 110.09
+  "last_cycle_finished_at": "2026-08-27T12:33:45.076202+00:00",
+  "last_cycle_duration_seconds": 80.09
 }
