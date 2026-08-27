@@ -70,32 +70,10 @@ def notify(tweet):
     }
     body = f'{tweet["author"]}\n{tweet["text"]}\n{tweet["url"]}'
 
-    last_response = None
-    for attempt in range(1, 5):
-        r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
-        last_response = r
-        if 200 <= r.status_code < 300:
-            return
-        if r.status_code == 429:
-            retry_after = r.headers.get("Retry-After", "")
-            try:
-                delay = float(retry_after)
-            except Exception:
-                delay = 5.0 * attempt
-            delay = max(3.0, min(delay, 20.0))
-            print(f"ntfy 429 Only Panathinaikos X; retry {attempt}/4 in {delay:.1f}s", flush=True)
-            time.sleep(delay)
-            continue
-        if 500 <= r.status_code < 600:
-            delay = 3.0 * attempt
-            print(f"ntfy {r.status_code} Only Panathinaikos X; retry {attempt}/4 in {delay:.1f}s", flush=True)
-            time.sleep(delay)
-            continue
-        r.raise_for_status()
-
-    if last_response is not None:
-        last_response.raise_for_status()
-    raise RuntimeError("ntfy delivery failed after retries")
+    # The Fast runner owns ntfy pacing/retries globally. Keep exactly one send
+    # here so a 429 cannot be amplified by a second nested retry loop.
+    r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
+    r.raise_for_status()
 
 
 def _tweet_from_result(t):
