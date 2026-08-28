@@ -17,6 +17,7 @@ THREADS = {
     "official_pao": os.environ.get("TELEGRAM_THREAD_OFFICIAL", "").strip(),
     "youtube_pao": os.environ.get("TELEGRAM_THREAD_YOUTUBE", "").strip(),
     "system": os.environ.get("TELEGRAM_THREAD_SYSTEM", "").strip(),
+    "conference_opponents": os.environ.get("TELEGRAM_THREAD_CONFERENCE", "273").strip(),
 }
 
 NTFY_ROUTE_ENV = {
@@ -65,6 +66,8 @@ def _route_header(route, original_title=""):
         return "📺 <b>YOUTUBE PAO</b>"
     if route == "system":
         return "🛠️ <b>SYSTEM / RECOVERY</b>"
+    if route == "conference_opponents":
+        return "🏆 <b>CONFERENCE LEAGUE | ΑΝΤΙΠΑΛΟΙ</b>"
 
     if route == "official_pao":
         if "KAE" in title_upper:
