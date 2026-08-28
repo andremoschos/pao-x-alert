@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/official-website-backup.yml'
       - 'official_website_backup.py'
+      - 'telegram_delivery.py'
   schedule:
     - cron: '*/5 * * * *'
 
@@ -28,6 +29,9 @@ jobs:
       - name: Check official websites
         env:
           NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_OFFICIAL: ${{ secrets.TELEGRAM_THREAD_OFFICIAL }}
         run: python official_website_backup.py
       - name: Save backup state
         run: |
