@@ -10,6 +10,7 @@ from pathlib import Path
 import requests
 
 import google_fast_adapter as google
+import conference_opponents_monitor as conference
 import monitor as x_general
 import official_monitor as official
 import official_x_direct_monitor as official_x_direct
@@ -27,6 +28,7 @@ STATE_FILES = [
     "seen.json",
     "panathinaikos_seen.json",
     "google_seen.json",
+    "conference_seen.json",
     "official_seen.json",
     "youtube_seen.json",
     "fast_health.json",
@@ -599,6 +601,7 @@ async def main():
         await run_component("x_general", x_general.main, health)
         await run_component("only_panathinaikos_x", only_x.main, health)
         await run_component("google_news_web", google.main, health)
+        await run_component("conference_opponents", conference.main, health)
         await run_component("official_pao", official_cycle, health)
         await run_component("youtube_pao", youtube.main, health)
 
