@@ -25,6 +25,7 @@ jobs:
       TELEGRAM_THREAD_OFFICIAL: ${{ secrets.TELEGRAM_THREAD_OFFICIAL }}
       TELEGRAM_THREAD_YOUTUBE: ${{ secrets.TELEGRAM_THREAD_YOUTUBE }}
       TELEGRAM_THREAD_SYSTEM: ${{ secrets.TELEGRAM_THREAD_SYSTEM }}
+      TELEGRAM_THREAD_CONFERENCE: "273"
 
     steps:
       - uses: actions/checkout@v4
