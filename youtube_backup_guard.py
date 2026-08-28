@@ -2,10 +2,36 @@ import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import requests
+import telegram_delivery as telegram
+
 import youtube_monitor as ym
 
 STATE = Path("youtube_seen.json")
 STALE_AFTER = timedelta(minutes=18)
+
+
+_ORIGINAL_POST = requests.post
+
+
+def _telegram_primary_post(url, *args, **kwargs):
+    if not str(url).startswith("https://ntfy.sh/"):
+        return _ORIGINAL_POST(url, *args, **kwargs)
+
+    telegram_ok = telegram.send_for_ntfy(url, kwargs)
+    response = _ORIGINAL_POST(url, *args, **kwargs)
+
+    if telegram_ok and not (200 <= response.status_code < 300):
+        accepted = requests.Response()
+        accepted.status_code = 202
+        accepted.reason = "Accepted"
+        accepted.url = str(url)
+        accepted._content = b"Telegram primary delivered; ntfy backup unavailable"
+        return accepted
+    return response
+
+
+requests.post = _telegram_primary_post
 
 
 def parse_dt(value):
