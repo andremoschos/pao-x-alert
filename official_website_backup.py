@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 import requests
+import telegram_delivery as telegram
 
 STATE = Path('official_website_backup_seen.json')
 OFFICIAL_STATE = Path('official_seen.json')
@@ -39,8 +40,13 @@ def valid(url, host):
     return not path.lower().endswith(('.jpg','.png','.webp','.svg','.pdf','.css','.js'))
 
 def notify(org,title,url):
-    r=requests.post(f'https://ntfy.sh/{TOPIC}',data=f'{title}\n{url}'.encode('utf-8'),headers={'Title':f'OFFICIAL PAO - {org} - WEBSITE','Priority':'high','Tags':'green_circle','Click':url},timeout=20)
-    r.raise_for_status()
+    body=f'{title}\n{url}'
+    tg_ok=telegram.send('official_pao',f'OFFICIAL PAO - {org} - WEBSITE',body,url)
+    if tg_ok:
+        print('TELEGRAM PRIMARY SENT', org, url)
+    r=requests.post(f'https://ntfy.sh/{TOPIC}',data=body.encode('utf-8'),headers={'Title':f'OFFICIAL PAO - {org} - WEBSITE','Priority':'high','Tags':'green_circle','Click':url},timeout=20)
+    if not tg_ok:
+        r.raise_for_status()
 
 def main():
     seen=load_ids(STATE); official=load_ids(OFFICIAL_STATE); changed=False
