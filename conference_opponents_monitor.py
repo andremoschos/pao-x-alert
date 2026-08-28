@@ -15,7 +15,7 @@ import telegram_delivery as telegram
 
 
 STATE = Path("conference_seen.json")
-ENGINE = "conference_opponents_v1"
+ENGINE = "conference_opponents_v2_media"
 FRESH_WINDOW = timedelta(hours=6)
 CHECK_INTERVAL_SECONDS = 300
 MAX_SEEN = 12000
@@ -29,6 +29,10 @@ TEAMS = [
         "editions": [("DE", "de", "de"), ("GB", "en-GB", "en")],
         "official": "https://www.scfreiburg.com/",
         "host": "scfreiburg.com",
+        "media": [
+            {"name": "Kicker", "url": "https://www.kicker.de/sc-freiburg/team-news", "host": "kicker.de", "team_page": True},
+            {"name": "SPORT1", "url": "https://www.sport1.de/team/sport-club-freiburg/opta_160", "host": "sport1.de", "team_page": True},
+        ],
     },
     {
         "key": "brighton",
@@ -37,6 +41,10 @@ TEAMS = [
         "editions": [("GB", "en-GB", "en")],
         "official": "https://www.brightonandhovealbion.com/",
         "host": "brightonandhovealbion.com",
+        "media": [
+            {"name": "Sky Sports", "url": "https://www.skysports.com/brighton-and-hove-albion", "host": "skysports.com", "team_page": True},
+            {"name": "The Guardian", "url": "https://www.theguardian.com/football/brightonfootball", "host": "theguardian.com", "team_page": True},
+        ],
     },
     {
         "key": "borac",
@@ -45,6 +53,10 @@ TEAMS = [
         "editions": [("BA", "bs", "bs"), ("GB", "en-GB", "en")],
         "official": "https://www.fkborac.net/",
         "host": "fkborac.net",
+        "media": [
+            {"name": "SportSport.ba", "url": "https://sportsport.ba/klub/fk-borac/103", "host": "sportsport.ba", "team_page": True},
+            {"name": "Klix Sport", "url": "https://www.klix.ba/sport/nogomet", "host": "klix.ba", "include": ["borac"]},
+        ],
     },
     {
         "key": "kairat",
@@ -53,6 +65,10 @@ TEAMS = [
         "editions": [("KZ", "ru", "ru"), ("GB", "en-GB", "en")],
         "official": "https://fckairat.com/",
         "host": "fckairat.com",
+        "media": [
+            {"name": "Sports.kz", "url": "https://www.sports.kz/news", "host": "sports.kz", "include": ["кайрат", "kairat"]},
+            {"name": "Vesti.kz", "url": "https://vesti.kz/team/24/", "host": "vesti.kz", "team_page": True},
+        ],
     },
     {
         "key": "cska_sofia",
@@ -61,6 +77,10 @@ TEAMS = [
         "editions": [("BG", "bg", "bg"), ("GB", "en-GB", "en")],
         "official": "https://cska.bg/",
         "host": "cska.bg",
+        "media": [
+            {"name": "Sportal.bg", "url": "https://sportal.bg/", "host": "sportal.bg", "include": ["цска", "cska"], "exclude": ["1948"]},
+            {"name": "Gong.bg", "url": "https://gong.bg/bg-football/efbet-liga", "host": "gong.bg", "include": ["цска", "cska"], "exclude": ["1948"]},
+        ],
     },
     {
         "key": "nordsjaelland",
@@ -69,6 +89,10 @@ TEAMS = [
         "editions": [("DK", "da", "da"), ("GB", "en-GB", "en")],
         "official": "https://www.fcn.dk/",
         "host": "fcn.dk",
+        "media": [
+            {"name": "Tipsbladet", "url": "https://www.tipsbladet.dk/klubber/fc-nordsjaelland/", "host": "tipsbladet.dk", "team_page": True},
+            {"name": "Bold.dk", "url": "https://bold.dk/", "host": "bold.dk", "include": ["nordsjælland", "nordsjaelland"]},
+        ],
     },
 ]
 
@@ -220,6 +244,91 @@ def canonical_host(url):
         return ""
 
 
+def _skip_link_path(path):
+    lowered = (path or "").lower()
+    return (
+        not lowered
+        or lowered == "/"
+        or any(
+            token in lowered
+            for token in (
+                "/shop", "/ticket", "/contact", "/privacy", "/cookie",
+                "/login", "/account", "/membership", "/impressum",
+                "/video/", "/videos/", "/live/", "/livescore/",
+                "/table", "/standings", "/fixtures", "/results",
+            )
+        )
+    )
+
+
+def direct_media(team, source):
+    response = requests.get(
+        source["url"],
+        timeout=25,
+        headers={"User-Agent": "Mozilla/5.0 (PAO Conference Media Watcher)"},
+    )
+    response.raise_for_status()
+
+    parser = LinkParser()
+    parser.feed(response.text)
+
+    include = [normalize(x) for x in source.get("include", [])]
+    exclude = [normalize(x) for x in source.get("exclude", [])]
+    team_page = bool(source.get("team_page"))
+    out = []
+    used = set()
+
+    for text, href in parser.items:
+        title = " ".join(text.split()).strip()
+        normalized_title = normalize(title)
+
+        if len(title) < 14 or normalized_title in GENERIC_LINK_TEXT:
+            continue
+        if include and not any(term in normalized_title for term in include):
+            continue
+        if exclude and any(term in normalized_title for term in exclude):
+            continue
+
+        url = urljoin(source["url"], href).split("#")[0]
+        host = canonical_host(url)
+        if host != source["host"] and not host.endswith("." + source["host"]):
+            continue
+
+        path = urlparse(url).path.rstrip("/")
+        if _skip_link_path(path):
+            continue
+
+        # General/homepage media sources must explicitly mention the team.
+        # Team-specific media pages are already scoped by the publisher.
+        if not team_page and include and not any(term in normalized_title for term in include):
+            continue
+
+        signature = (normalized_title, url)
+        if signature in used:
+            continue
+        used.add(signature)
+
+        out.append(
+            {
+                "id": make_id(team["key"], f'media:{source["name"]}', title, url),
+                "team": team["name"],
+                "kind": f'DIRECT / {source["name"]}',
+                "title": title[:500],
+                "url": url,
+                "publisher": source["name"],
+                "published": None,
+            }
+        )
+
+        if len(out) >= 40:
+            break
+
+    print(
+        f'Conference Media [{team["name"]}/{source["name"]}]: {len(out)}'
+    )
+    return out
+
+
 def direct_official(team):
     response = requests.get(
         team["official"],
@@ -325,6 +434,15 @@ def main():
             results.extend(direct_official(team))
         except Exception as exc:
             errors.append(f'Direct {team["name"]}: {type(exc).__name__}: {exc}')
+
+        for source in team.get("media", []):
+            try:
+                results.extend(direct_media(team, source))
+            except Exception as exc:
+                errors.append(
+                    f'Media {team["name"]}/{source["name"]}: '
+                    f'{type(exc).__name__}: {exc}'
+                )
 
     unique = {}
     for item in results:
