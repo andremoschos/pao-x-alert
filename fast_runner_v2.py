@@ -365,12 +365,27 @@ def resilient_post(url, *args, **kwargs):
 
     _refresh_ntfy_budget_day()
     if _ntfy_budget["count"] >= NTFY_LOCAL_DAILY_BUDGET:
+        if telegram_ok:
+            return _accepted_response(
+                url,
+                "Telegram primary delivered; ntfy backup skipped at daily safety budget",
+            )
         _queue_ntfy(url, kwargs, "local daily safety budget reached")
         return _accepted_response(url, "queued: local ntfy daily safety budget reached")
 
     now_mono = time.monotonic()
     if now_mono < _ntfy_blocked_until:
         remaining = _ntfy_blocked_until - now_mono
+        if telegram_ok:
+            print(
+                f"ntfy circuit open; Telegram primary already delivered; "
+                f"backup skipped for {remaining:.1f}s",
+                flush=True,
+            )
+            return _accepted_response(
+                url,
+                "Telegram primary delivered while ntfy circuit is open",
+            )
         _queue_ntfy(url, kwargs, "ntfy cooldown circuit open")
         print(
             f"ntfy circuit open; queued delivery for {url}; "
@@ -394,6 +409,11 @@ def resilient_post(url, *args, **kwargs):
         return response
 
     if response.status_code != 429:
+        if telegram_ok:
+            return _accepted_response(
+                url,
+                f"Telegram primary delivered; ntfy backup HTTP {response.status_code}",
+            )
         return response
 
     daily_quota = _is_daily_quota_429(response)
@@ -409,6 +429,15 @@ def resilient_post(url, *args, **kwargs):
     _ntfy_blocked_until = time.monotonic() + cooldown
     _ntfy_blocked_headers = dict(response.headers)
     _record_429(response, cooldown, daily_quota)
+
+    if telegram_ok:
+        print(
+            f"ntfy 429 ignored as backup failure because Telegram primary delivered; "
+            f"cooldown={cooldown:.1f}s",
+            flush=True,
+        )
+        return _accepted_response(url, "Telegram primary delivered; ntfy backup rate-limited")
+
     _queue_ntfy(
         url,
         kwargs,
