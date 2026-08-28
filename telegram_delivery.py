@@ -1,4 +1,6 @@
+import html
 import os
+import re
 from datetime import datetime, timezone
 
 import requests
@@ -43,24 +45,66 @@ def _route_for_ntfy_url(url):
     return None
 
 
-def _safe_text(title, body, click=None):
-    parts = []
-    if title:
-        parts.append(str(title).strip())
-    if body:
-        parts.append(str(body).strip())
-    text = "\n\n".join(part for part in parts if part)
+def _route_header(route, original_title=""):
+    title_upper = str(original_title or "").upper()
 
-    if click:
-        click = str(click).strip()
-        if click and click not in text:
-            text = f"{text}\n\n{click}" if text else click
+    if route == "x_general":
+        return "🚨 <b>X / TWITTER PAO</b>"
+    if route == "only_panathinaikos_x":
+        return "☘️ <b>ONLY PANATHINAIKOS X</b>"
+    if route == "google_news_web":
+        return "📰 <b>GOOGLE NEWS + WEB</b>"
+    if route == "youtube_pao":
+        return "📺 <b>YOUTUBE PAO</b>"
+    if route == "system":
+        return "🛠️ <b>SYSTEM / RECOVERY</b>"
 
-    # Telegram sendMessage allows 4096 characters. Keep a little headroom.
+    if route == "official_pao":
+        if "KAE" in title_upper:
+            return "🏀 <b>ΚΑΕ ΠΑΝΑΘΗΝΑΪΚΟΣ | ΕΠΙΣΗΜΟ</b>"
+        if "PAE" in title_upper:
+            return "⚽ <b>ΠΑΕ ΠΑΝΑΘΗΝΑΪΚΟΣ | ΕΠΙΣΗΜΟ</b>"
+        if "AO" in title_upper:
+            return "☘️ <b>ΑΟ ΠΑΝΑΘΗΝΑΪΚΟΣ | ΕΠΙΣΗΜΟ</b>"
+        return "🏛️ <b>ΕΠΙΣΗΜΑ ΠΑΟ</b>"
+
+    return "☘️ <b>PAO WATCHER</b>"
+
+
+def _clean_body(body):
+    text = str(body or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = text.replace("\n---\n", "\n━━━━━━━━━━━━\n")
+    return text
+
+
+def _safe_text(route, title, body, click=None):
+    header = _route_header(route, title)
+    cleaned = _clean_body(body)
+
+    # Keep enough room for the header and optional final link.
+    if len(cleaned) > 3550:
+        cleaned = cleaned[:3520].rstrip() + "\n…"
+
+    body_html = html.escape(cleaned)
+    parts = [header]
+
+    # Avoid repeating the old ntfy title when the Telegram category header
+    # already provides the context.
+    if body_html:
+        parts.append(body_html)
+
+    click = str(click or "").strip()
+    if click and click not in cleaned:
+        safe_click = html.escape(click, quote=True)
+        parts.append(f'🔗 <a href="{safe_click}">Άνοιγμα πηγής</a>')
+
+    text = "\n\n".join(parts)
+
+    # Telegram sendMessage limit is 4096 characters.
     if len(text) > 4000:
-        text = text[:3970] + "\n\n…[truncated]"
-    return text or "PAO Watcher alert"
-
+        text = text[:3970].rstrip() + "\n…"
+    return text
 
 def send(route, title, body, click=None):
     global _last_ok, _last_error, _successful_sends, _failed_sends
@@ -85,7 +129,8 @@ def send(route, title, body, click=None):
     payload = {
         "chat_id": CHAT_ID,
         "message_thread_id": thread_id,
-        "text": _safe_text(title, body, click),
+        "text": _safe_text(route, title, body, click),
+        "parse_mode": "HTML",
         "disable_notification": False,
         "link_preview_options": {"is_disabled": True},
     }
