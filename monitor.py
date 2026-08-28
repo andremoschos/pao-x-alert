@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import quote
 
 import requests
+import telegram_delivery as telegram
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
@@ -50,6 +51,45 @@ def save_state(ids):
     )
 
 
+
+def _extract_media_from_twscrape(tweet):
+    media = []
+    container = getattr(tweet, "media", None)
+    if not container:
+        return media
+
+    for photo in list(getattr(container, "photos", None) or []):
+        url = getattr(photo, "url", None)
+        if url:
+            media.append({"type": "photo", "url": str(url)})
+
+    video_groups = []
+    video_groups.extend(list(getattr(container, "videos", None) or []))
+    video_groups.extend(list(getattr(container, "animated", None) or []))
+
+    for video in video_groups:
+        candidates = []
+        for variant in list(getattr(video, "variants", None) or []):
+            url = getattr(variant, "url", None)
+            content_type = str(getattr(variant, "contentType", "") or "")
+            bitrate = int(getattr(variant, "bitrate", 0) or 0)
+            if url and ("mp4" in content_type.lower() or str(url).split("?")[0].lower().endswith(".mp4")):
+                candidates.append((bitrate, str(url)))
+        if candidates:
+            candidates.sort(reverse=True)
+            media.append({"type": "video", "url": candidates[0][1]})
+
+    # Preserve order while removing duplicate URLs.
+    out = []
+    seen_urls = set()
+    for item in media:
+        if item["url"] in seen_urls:
+            continue
+        seen_urls.add(item["url"])
+        out.append(item)
+    return out[:10]
+
+
 def snowflake_datetime(tweet_id: int) -> datetime:
     ms = (int(tweet_id) >> 22) + 1288834974657
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
@@ -81,18 +121,28 @@ def _tweet_batches(tweets):
 
 
 def notify_batch(tweets):
+    failed = []
+    for tweet in tweets:
+        if telegram.send_x_post("x_general", tweet):
+            print(
+                f'X Telegram sent: {tweet["url"]} media={len(tweet.get("media") or [])}',
+                flush=True,
+            )
+        else:
+            failed.append(tweet)
+
+    if not failed:
+        return
+
     url = f"https://ntfy.sh/{TOPIC}"
-    count = len(tweets)
+    count = len(failed)
     headers = {
         "Title": "NEO PANATHINAIKOS POST" if count == 1 else f"{count} NEA PANATHINAIKOS POSTS",
         "Priority": "high",
         "Tags": "rotating_light",
-        "Click": tweets[-1]["url"],
+        "Click": failed[-1]["url"],
     }
-    body = "\n\n---\n\n".join(_format_tweet(tweet) for tweet in tweets)
-
-    # One ntfy publication can carry multiple discoveries from the same cycle.
-    # This preserves real-time polling while drastically reducing daily quota use.
+    body = "\n\n---\n\n".join(_format_tweet(tweet) for tweet in failed)
     r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
     r.raise_for_status()
 
@@ -121,6 +171,7 @@ async def fetch_latest_twscrape():
                 "text": text,
                 "url": f"https://x.com/{username}/status/{tid}",
                 "created": snowflake_datetime(int(tid)),
+                "media": _extract_media_from_twscrape(t),
             }
         )
     if not tweets:
@@ -168,12 +219,26 @@ async def fetch_latest_browser():
                     if not match:
                         continue
                     username, tid = match.group(1), match.group(2)
+                    media = []
+                    image_nodes = article.locator('img[src*="pbs.twimg.com/media"]')
+                    for k in range(min(await image_nodes.count(), 10)):
+                        src = (await image_nodes.nth(k).get_attribute("src") or "").strip()
+                        if src:
+                            media.append({"type": "photo", "url": src})
+
+                    video_nodes = article.locator('video source')
+                    for k in range(min(await video_nodes.count(), 4)):
+                        src = (await video_nodes.nth(k).get_attribute("src") or "").strip()
+                        if src.startswith("https://"):
+                            media.append({"type": "video", "url": src})
+
                     found[tid] = {
                         "id": tid,
                         "author": f"@{username}",
                         "text": text or "(post without text)",
                         "url": f"https://x.com/{username}/status/{tid}",
                         "created": snowflake_datetime(int(tid)),
+                        "media": media[:10],
                     }
                     break
 
