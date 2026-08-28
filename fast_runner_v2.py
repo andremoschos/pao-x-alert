@@ -354,14 +354,22 @@ def resilient_post(url, *args, **kwargs):
 
     telegram_ok = telegram.send_for_ntfy(url, kwargs)
     if telegram_ok:
-        print(f"Telegram primary delivered for {url.rsplit('/', 1)[-1]}", flush=True)
-    else:
-        snapshot = telegram.health_snapshot()
         print(
-            f"Telegram primary unavailable for {url.rsplit('/', 1)[-1]}: "
-            f"{snapshot.get('last_error')}; using ntfy fallback",
+            f"Telegram primary delivered for {url.rsplit('/', 1)[-1]}; "
+            "ntfy fallback not needed",
             flush=True,
         )
+        return _accepted_response(
+            url,
+            "Telegram primary delivered; ntfy fallback not needed",
+        )
+
+    snapshot = telegram.health_snapshot()
+    print(
+        f"Telegram primary unavailable for {url.rsplit('/', 1)[-1]}: "
+        f"{snapshot.get('last_error')}; using ntfy fallback",
+        flush=True,
+    )
 
     _refresh_ntfy_budget_day()
     if _ntfy_budget["count"] >= NTFY_LOCAL_DAILY_BUDGET:
