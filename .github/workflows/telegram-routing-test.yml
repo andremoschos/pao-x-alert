@@ -1,0 +1,32 @@
+name: Telegram Routing Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/telegram-routing-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_THREAD_X_GENERAL: ${{ secrets.TELEGRAM_THREAD_X_GENERAL }}
+      TELEGRAM_THREAD_ONLY_PAO_X: ${{ secrets.TELEGRAM_THREAD_ONLY_PAO_X }}
+      TELEGRAM_THREAD_GOOGLE: ${{ secrets.TELEGRAM_THREAD_GOOGLE }}
+      TELEGRAM_THREAD_OFFICIAL: ${{ secrets.TELEGRAM_THREAD_OFFICIAL }}
+      TELEGRAM_THREAD_YOUTUBE: ${{ secrets.TELEGRAM_THREAD_YOUTUBE }}
+      TELEGRAM_THREAD_SYSTEM: ${{ secrets.TELEGRAM_THREAD_SYSTEM }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Send one test to every Telegram topic
+        run: python telegram_smoke_test.py
