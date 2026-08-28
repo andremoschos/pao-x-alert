@@ -19,16 +19,15 @@ def _telegram_primary_post(url, *args, **kwargs):
         return _ORIGINAL_POST(url, *args, **kwargs)
 
     telegram_ok = telegram.send_for_ntfy(url, kwargs)
-    response = _ORIGINAL_POST(url, *args, **kwargs)
-
-    if telegram_ok and not (200 <= response.status_code < 300):
+    if telegram_ok:
         accepted = requests.Response()
         accepted.status_code = 202
         accepted.reason = "Accepted"
         accepted.url = str(url)
-        accepted._content = b"Telegram primary delivered; ntfy backup unavailable"
+        accepted._content = b"Telegram primary delivered; ntfy fallback not needed"
         return accepted
-    return response
+
+    return _ORIGINAL_POST(url, *args, **kwargs)
 
 
 requests.post = _telegram_primary_post
