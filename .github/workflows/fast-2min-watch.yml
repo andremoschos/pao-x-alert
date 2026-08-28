@@ -16,6 +16,7 @@ on:
       - "official_monitor.py"
       - "official_x_direct_monitor.py"
       - "youtube_monitor.py"
+      - "telegram_delivery.py"
       - "requirements.txt"
   schedule:
     # Refresh the long-running runner every 4 hours.
