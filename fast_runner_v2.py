@@ -15,6 +15,7 @@ import official_monitor as official
 import official_x_direct_monitor as official_x_direct
 import panathinaikos_monitor as only_x
 import youtube_monitor as youtube
+import telegram_delivery as telegram
 
 POLL_SECONDS = 120
 HEALTH = Path("fast_health.json")
@@ -351,6 +352,17 @@ def resilient_post(url, *args, **kwargs):
     if not str(url).startswith("https://ntfy.sh/"):
         return _ORIGINAL_REQUESTS_POST(url, *args, **kwargs)
 
+    telegram_ok = telegram.send_for_ntfy(url, kwargs)
+    if telegram_ok:
+        print(f"Telegram primary delivered for {url.rsplit('/', 1)[-1]}", flush=True)
+    else:
+        snapshot = telegram.health_snapshot()
+        print(
+            f"Telegram primary unavailable for {url.rsplit('/', 1)[-1]}: "
+            f"{snapshot.get('last_error')}; using ntfy fallback",
+            flush=True,
+        )
+
     _refresh_ntfy_budget_day()
     if _ntfy_budget["count"] >= NTFY_LOCAL_DAILY_BUDGET:
         _queue_ntfy(url, kwargs, "local daily safety budget reached")
@@ -445,6 +457,7 @@ def ntfy_health_snapshot():
         ),
         "last_429": _ntfy_last_429,
         "outbox_pending": len(_load_ntfy_outbox()),
+        "telegram": telegram.health_snapshot(),
     }
 
 
