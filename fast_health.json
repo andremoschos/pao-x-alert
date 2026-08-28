@@ -168,12 +168,12 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 1042,
-  "runner_started_or_alive_at": "2026-08-28T13:25:28.510313+00:00",
+  "cycle": 1043,
+  "runner_started_or_alive_at": "2026-08-28T13:27:28.554341+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-08-28T13:25:35.658675+00:00",
+      "last_ok": "2026-08-28T13:27:35.705001+00:00",
       "last_error": null,
       "last_duration_seconds": 7.15,
       "last_attempt": "2026-08-28T05:09:47.287143+00:00"
@@ -182,38 +182,38 @@
       "status": "ok",
       "last_attempt": "2026-08-27T23:30:34.848890+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.12,
-      "last_ok": "2026-08-28T13:25:42.778818+00:00"
+      "last_duration_seconds": 7.41,
+      "last_ok": "2026-08-28T13:27:43.113600+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-28T13:25:44.167636+00:00",
+      "last_ok": "2026-08-28T13:27:44.461545+00:00",
       "last_error": null,
-      "last_duration_seconds": 1.39,
+      "last_duration_seconds": 1.35,
       "last_attempt": "2026-08-27T23:30:41.775583+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-28T13:26:27.779556+00:00",
+      "last_ok": "2026-08-28T13:28:28.254668+00:00",
       "last_error": null,
-      "last_duration_seconds": 43.61
+      "last_duration_seconds": 43.79
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-28T13:26:27.780733+00:00",
+      "last_ok": "2026-08-28T13:28:28.255880+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-28T13:26:27.780754+00:00",
-  "last_cycle_duration_seconds": 59.27,
+  "last_cycle_finished_at": "2026-08-28T13:28:28.255902+00:00",
+  "last_cycle_duration_seconds": 59.7,
   "ntfy": {
     "local_budget_day_utc": "2026-08-28",
     "local_successful_publications": 249,
     "local_daily_budget": 249,
     "circuit_remaining_seconds": 0.0,
     "last_429": null,
-    "outbox_pending": 285
+    "outbox_pending": 288
   }
 }
