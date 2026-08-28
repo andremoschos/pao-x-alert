@@ -8,6 +8,7 @@ import requests
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+ONLY_PAO_CHAT_ID = os.environ.get("TELEGRAM_ONLY_PAO_CHAT_ID", "").strip()
 
 THREADS = {
     "x_general": os.environ.get("TELEGRAM_THREAD_X_GENERAL", "").strip(),
@@ -34,6 +35,12 @@ _failed_sends = 0
 
 def configured():
     return bool(BOT_TOKEN and CHAT_ID)
+
+
+def _chat_for_route(route):
+    if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
+        return ONLY_PAO_CHAT_ID
+    return CHAT_ID
 
 
 def _route_for_ntfy_url(url):
@@ -114,26 +121,30 @@ def send(route, title, body, click=None):
         return False
 
     thread = THREADS.get(route, "")
-    if not thread:
-        _last_error = f"Telegram thread missing for route={route}"
-        _failed_sends += 1
-        return False
+    if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
+        thread_id = None
+    else:
+        if not thread:
+            _last_error = f"Telegram thread missing for route={route}"
+            _failed_sends += 1
+            return False
+        try:
+            thread_id = int(thread)
+        except Exception:
+            _last_error = f"Invalid Telegram thread id for route={route}"
+            _failed_sends += 1
+            return False
 
-    try:
-        thread_id = int(thread)
-    except Exception:
-        _last_error = f"Invalid Telegram thread id for route={route}"
-        _failed_sends += 1
-        return False
-
+    target_chat_id = _chat_for_route(route)
     payload = {
-        "chat_id": CHAT_ID,
-        "message_thread_id": thread_id,
+        "chat_id": target_chat_id,
         "text": _safe_text(route, title, body, click),
         "parse_mode": "HTML",
         "disable_notification": False,
         "link_preview_options": {"is_disabled": True},
     }
+    if route != "only_panathinaikos_x" or not ONLY_PAO_CHAT_ID:
+        payload["message_thread_id"] = thread_id
 
     try:
         response = requests.post(
