@@ -45,6 +45,14 @@ jobs:
       NTFY_OFFICIAL_TOPIC: ${{ secrets.NTFY_OFFICIAL_TOPIC }}
       NTFY_YOUTUBE_TOPIC: ${{ secrets.NTFY_YOUTUBE_TOPIC }}
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_THREAD_X_GENERAL: ${{ secrets.TELEGRAM_THREAD_X_GENERAL }}
+      TELEGRAM_THREAD_ONLY_PAO_X: ${{ secrets.TELEGRAM_THREAD_ONLY_PAO_X }}
+      TELEGRAM_THREAD_GOOGLE: ${{ secrets.TELEGRAM_THREAD_GOOGLE }}
+      TELEGRAM_THREAD_OFFICIAL: ${{ secrets.TELEGRAM_THREAD_OFFICIAL }}
+      TELEGRAM_THREAD_YOUTUBE: ${{ secrets.TELEGRAM_THREAD_YOUTUBE }}
+      TELEGRAM_THREAD_SYSTEM: ${{ secrets.TELEGRAM_THREAD_SYSTEM }}
 
     steps:
       - name: Checkout
@@ -72,7 +80,8 @@ jobs:
             google_fast_adapter.py \
             official_monitor.py \
             official_x_direct_monitor.py \
-            youtube_monitor.py
+            youtube_monitor.py \
+            telegram_delivery.py
 
       - name: Retire legacy safety workflows
         env:
