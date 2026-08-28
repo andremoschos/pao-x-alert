@@ -24,9 +24,15 @@ jobs:
     timeout-minutes: 260
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Run continuous PAO recovery watchdog
         env:
           GH_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_SYSTEM: ${{ secrets.TELEGRAM_THREAD_SYSTEM }}
         shell: bash
         run: |
           set -u
@@ -104,6 +110,7 @@ jobs:
             fi
 
             echo "Fast watcher missing or stale: repairing now."
+            python system_notify.py "🛠 PAO Watcher recovery started: Fast runner missing/stale; heartbeat_age=${heartbeat_age}s active_runs=${active}" || true
 
             jq -r '.[].databaseId' <<<"$active_runs" 2>/dev/null | while read -r run_id; do
               if [ -n "$run_id" ]; then
@@ -123,6 +130,7 @@ jobs:
               --repo "$GITHUB_REPOSITORY" --ref main
 
             echo "Fresh Fast runner dispatched."
+            python system_notify.py "✅ PAO Watcher recovery dispatched a fresh Fast 2-Min runner." || true
           }
 
           # Stay alive for ~3h50m and check every five minutes. Before GitHub's
