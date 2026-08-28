@@ -15,7 +15,7 @@ import telegram_delivery as telegram
 
 
 STATE = Path("conference_seen.json")
-ENGINE = "conference_opponents_v2_media"
+ENGINE = "conference_opponents_v3_stable_urls"
 FRESH_WINDOW = timedelta(hours=6)
 CHECK_INTERVAL_SECONDS = 300
 MAX_SEEN = 12000
@@ -140,7 +140,13 @@ def normalize(text):
 
 
 def make_id(team_key, source, title, url):
-    basis = f"{team_key}\n{source}\n{normalize(title)}\n{url}"
+    # Direct pages often mutate visible snippets/counters while keeping the same
+    # article URL. Key direct/official discoveries by stable URL so an old page
+    # can never be re-alerted just because its displayed text changed.
+    if source == "official" or str(source).startswith("media:"):
+        basis = f"{team_key}\n{source}\n{url}"
+    else:
+        basis = f"{team_key}\n{source}\n{normalize(title)}\n{url}"
     return hashlib.sha256(basis.encode("utf-8", errors="ignore")).hexdigest()
 
 
@@ -390,14 +396,16 @@ def direct_official(team):
 
 
 def format_alert(item):
+    # telegram_delivery applies HTML escaping itself; keep the body plain here
+    # so tags never appear literally in the Telegram message.
     lines = [
-        f'⚽ <b>{html.escape(item["team"])}</b>',
-        f'📌 {html.escape(item["kind"])}',
+        f'⚽ {item["team"]}',
+        f'📌 {item["kind"]}',
         "",
-        f'<b>{html.escape(item["title"])}</b>',
+        item["title"],
     ]
     if item.get("publisher"):
-        lines.append(f'Πηγή: {html.escape(item["publisher"])}')
+        lines.append(f'Πηγή: {item["publisher"]}')
     return "\n".join(lines)
 
 
