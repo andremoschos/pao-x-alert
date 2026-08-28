@@ -149,7 +149,6 @@ NEWS_EDITIONS = [
     ("NL", "nl", "nl"),
     ("PL", "pl", "pl"),
     ("RO", "ro", "ro"),
-    ("CZ", "cs", "cs"),
     ("RS", "sr", "sr"),
     ("HR", "hr", "hr"),
     ("AU", "en-AU", "en"),
