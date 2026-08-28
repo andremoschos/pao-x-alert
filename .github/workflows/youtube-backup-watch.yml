@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/youtube-backup-watch.yml"
       - "youtube_backup_guard.py"
+      - "telegram_delivery.py"
   schedule:
     - cron: "*/5 * * * *"
 
@@ -37,6 +38,9 @@ jobs:
         env:
           NTFY_YOUTUBE_TOPIC: ${{ secrets.NTFY_YOUTUBE_TOPIC }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_YOUTUBE: ${{ secrets.TELEGRAM_THREAD_YOUTUBE }}
         run: python youtube_backup_guard.py
 
       - name: Save YouTube recovery state
