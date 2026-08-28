@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - ".github/workflows/telegram-routing-test.yml"
+      - "telegram_delivery.py"
+      - "telegram_smoke_test.py"
 
 permissions:
   contents: read
