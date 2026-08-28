@@ -44,9 +44,9 @@ def notify(org,title,url):
     tg_ok=telegram.send('official_pao',f'OFFICIAL PAO - {org} - WEBSITE',body,url)
     if tg_ok:
         print('TELEGRAM PRIMARY SENT', org, url)
+        return
     r=requests.post(f'https://ntfy.sh/{TOPIC}',data=body.encode('utf-8'),headers={'Title':f'OFFICIAL PAO - {org} - WEBSITE','Priority':'high','Tags':'green_circle','Click':url},timeout=20)
-    if not tg_ok:
-        r.raise_for_status()
+    r.raise_for_status()
 
 def main():
     seen=load_ids(STATE); official=load_ids(OFFICIAL_STATE); changed=False
