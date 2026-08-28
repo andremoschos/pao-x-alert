@@ -8,6 +8,7 @@ TESTS = [
     ("official_pao", "OFFICIAL PAO - PAE - WEBSITE", "Δοκιμαστική επίσημη ανακοίνωση ΠΑΕ\nhttps://www.pao.gr/example", "https://www.pao.gr/example"),
     ("youtube_pao", "YOUTUBE: PANATHINAIKOS", "Δοκιμαστικό νέο βίντεο\nExample Channel\nhttps://www.youtube.com/watch?v=example", "https://www.youtube.com/watch?v=example"),
     ("system", "SYSTEM", "Δοκιμαστικό μήνυμα health / recovery", None),
+    ("conference_opponents", "CONFERENCE", "Δοκιμαστικό alert αντιπάλων Conference League", "https://www.uefa.com/"),
 ]
 
 
