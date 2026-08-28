@@ -13,6 +13,7 @@ on:
       - "panathinaikos_monitor.py"
       - "google_monitor.py"
       - "google_fast_adapter.py"
+      - "conference_opponents_monitor.py"
       - "official_monitor.py"
       - "official_x_direct_monitor.py"
       - "youtube_monitor.py"
@@ -55,6 +56,7 @@ jobs:
       TELEGRAM_THREAD_OFFICIAL: ${{ secrets.TELEGRAM_THREAD_OFFICIAL }}
       TELEGRAM_THREAD_YOUTUBE: ${{ secrets.TELEGRAM_THREAD_YOUTUBE }}
       TELEGRAM_THREAD_SYSTEM: ${{ secrets.TELEGRAM_THREAD_SYSTEM }}
+      TELEGRAM_THREAD_CONFERENCE: "273"
 
     steps:
       - name: Checkout
@@ -80,6 +82,7 @@ jobs:
             panathinaikos_monitor.py \
             google_monitor.py \
             google_fast_adapter.py \
+            conference_opponents_monitor.py \
             official_monitor.py \
             official_x_direct_monitor.py \
             youtube_monitor.py \
