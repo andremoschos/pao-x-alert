@@ -168,49 +168,49 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 797,
-  "runner_started_or_alive_at": "2026-08-28T05:09:47.287005+00:00",
+  "cycle": 798,
+  "runner_started_or_alive_at": "2026-08-28T05:11:47.346086+00:00",
   "components": {
     "x_general": {
-      "status": "error",
-      "last_ok": "2026-08-28T05:07:54.643504+00:00",
-      "last_error": "RuntimeError: Chromium X search returned 0 posts",
-      "last_duration_seconds": 7.2,
+      "status": "ok",
+      "last_ok": "2026-08-28T05:11:54.582827+00:00",
+      "last_error": null,
+      "last_duration_seconds": 7.24,
       "last_attempt": "2026-08-28T05:09:47.287143+00:00"
     },
     "only_panathinaikos_x": {
       "status": "ok",
       "last_attempt": "2026-08-27T23:30:34.848890+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.32,
-      "last_ok": "2026-08-28T05:10:01.804121+00:00"
+      "last_duration_seconds": 7.47,
+      "last_ok": "2026-08-28T05:12:02.052874+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-28T05:10:02.916810+00:00",
+      "last_ok": "2026-08-28T05:12:03.229045+00:00",
       "last_error": null,
-      "last_duration_seconds": 1.11,
+      "last_duration_seconds": 1.18,
       "last_attempt": "2026-08-27T23:30:41.775583+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-28T05:10:47.633490+00:00",
+      "last_ok": "2026-08-28T05:12:48.528675+00:00",
       "last_error": null,
-      "last_duration_seconds": 44.72
+      "last_duration_seconds": 45.3
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-28T05:10:47.790086+00:00",
+      "last_ok": "2026-08-28T05:12:48.632301+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.16,
+      "last_duration_seconds": 0.1,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-08-28T05:10:47.790126+00:00",
-  "last_cycle_duration_seconds": 60.5,
+  "last_cycle_finished_at": "2026-08-28T05:12:48.632325+00:00",
+  "last_cycle_duration_seconds": 61.29,
   "ntfy": {
     "local_budget_day_utc": "2026-08-28",
-    "local_successful_publications": 78,
+    "local_successful_publications": 79,
     "local_daily_budget": 249,
     "circuit_remaining_seconds": 0.0,
     "last_429": null,
