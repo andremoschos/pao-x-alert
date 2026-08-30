@@ -168,52 +168,52 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 2443,
-  "runner_started_or_alive_at": "2026-08-30T13:06:44.272418+00:00",
+  "cycle": 2444,
+  "runner_started_or_alive_at": "2026-08-30T13:08:44.333513+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-08-30T13:06:51.532311+00:00",
+      "last_ok": "2026-08-30T13:08:51.952040+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.26,
+      "last_duration_seconds": 7.62,
       "last_attempt": "2026-08-29T06:12:56.048802+00:00"
     },
     "only_panathinaikos_x": {
       "status": "ok",
       "last_attempt": "2026-08-28T20:35:02.108897+00:00",
       "last_error": null,
-      "last_duration_seconds": 7.27,
-      "last_ok": "2026-08-30T13:06:58.797577+00:00"
+      "last_duration_seconds": 7.29,
+      "last_ok": "2026-08-30T13:08:59.243012+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-08-30T13:06:59.755566+00:00",
+      "last_ok": "2026-08-30T13:09:00.201014+00:00",
       "last_error": null,
       "last_duration_seconds": 0.96,
       "last_attempt": "2026-08-27T23:30:41.775583+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-08-30T13:07:42.618787+00:00",
+      "last_ok": "2026-08-30T13:10:00.510377+00:00",
       "last_error": null,
-      "last_duration_seconds": 42.86
+      "last_duration_seconds": 43.43
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-08-30T13:07:42.620057+00:00",
+      "last_ok": "2026-08-30T13:10:00.868144+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.0,
+      "last_duration_seconds": 0.36,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
     },
     "conference_opponents": {
       "status": "ok",
-      "last_ok": "2026-08-30T13:06:59.756624+00:00",
+      "last_ok": "2026-08-30T13:09:17.077715+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.0
+      "last_duration_seconds": 16.88
     }
   },
-  "last_cycle_finished_at": "2026-08-30T13:07:42.620082+00:00",
-  "last_cycle_duration_seconds": 58.35,
+  "last_cycle_finished_at": "2026-08-30T13:10:00.868176+00:00",
+  "last_cycle_duration_seconds": 76.53,
   "ntfy": {
     "local_budget_day_utc": "2026-08-30",
     "local_successful_publications": 0,
@@ -223,9 +223,9 @@
     "outbox_pending": 0,
     "telegram": {
       "configured": true,
-      "last_ok": "2026-08-30T13:02:59.579043+00:00",
+      "last_ok": "2026-08-30T13:09:17.074577+00:00",
       "last_error": null,
-      "successful_sends": 65,
+      "successful_sends": 69,
       "failed_sends": 0
     }
   }
