@@ -17,6 +17,7 @@ import official_x_direct_monitor as official_x_direct
 import panathinaikos_monitor as only_x
 import youtube_monitor as youtube
 import telegram_delivery as telegram
+import transferfeed_monitor as transferfeed
 
 POLL_SECONDS = 120
 HEALTH = Path("fast_health.json")
@@ -28,6 +29,7 @@ STATE_FILES = [
     "seen.json",
     "panathinaikos_seen.json",
     "google_seen.json",
+    "transferfeed_seen.json",
     "conference_seen.json",
     "official_seen.json",
     "youtube_seen.json",
@@ -601,6 +603,7 @@ async def main():
         await run_component("x_general", x_general.main, health)
         await run_component("only_panathinaikos_x", only_x.main, health)
         await run_component("google_news_web", google.main, health)
+        await run_component("transferfeed_panathinaikos", transferfeed.main, health)
         await run_component("conference_opponents", conference.main, health)
         await run_component("official_pao", official_cycle, health)
         await run_component("youtube_pao", youtube.main, health)
