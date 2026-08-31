@@ -4,7 +4,6 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 import requests
-import telegram_delivery as telegram
 
 
 STATE = Path("transferfeed_seen.json")
@@ -104,38 +103,15 @@ def fetch_items():
         used.add(full)
 
         title = text
-        # TransferFeed anchor text often includes the age and a short summary.
-        # Keep it readable in Telegram without losing the player/context.
         if len(title) > 700:
             title = title[:697].rstrip() + "..."
 
-        out.append(
-            {
-                "id": full,
-                "title": title,
-                "url": full,
-            }
-        )
-
+        out.append({"id": full, "title": title, "url": full})
         if len(out) >= 50:
             break
 
     print(f"TransferFeed Panathinaikos results: {len(out)}", flush=True)
     return out
-
-
-def notify(item):
-    body = (
-        f'🔄 PANATHINAIKOS TRANSFER\n\n'
-        f'{item["title"]}\n'
-        f'Πηγή: TransferFeed'
-    )
-    return telegram.send(
-        "google_news_web",
-        "DIRECT | TRANSFERFEED | PANATHINAIKOS",
-        body,
-        item["url"],
-    )
 
 
 def main():
@@ -148,7 +124,6 @@ def main():
 
     current_ids = {item["id"] for item in items}
 
-    # First deployment baselines current page so old rumours do not flood Telegram.
     if state["engine"] != ENGINE:
         seen.update(current_ids)
         save_state(seen)
@@ -156,18 +131,19 @@ def main():
         return
 
     fresh = [item for item in items if item["id"] not in seen]
-
-    sent = 0
-    for item in reversed(fresh):
-        if not notify(item):
-            raise RuntimeError("TransferFeed Telegram delivery failed")
-        seen.add(item["id"])
-        sent += 1
-        print(f'TransferFeed sent: {item["url"]}', flush=True)
+    if fresh:
+        # Do not send to Google News/Web and do not mark fresh items seen.
+        # They remain pending until the dedicated PAO direct Telegram chat is wired.
+        print(
+            f"TransferFeed fresh pending dedicated PAO direct Telegram route: {len(fresh)}",
+            flush=True,
+        )
+        save_state(seen)
+        return
 
     seen.update(current_ids)
     save_state(seen)
-    print(f"TransferFeed fresh items: {sent}", flush=True)
+    print("TransferFeed fresh items: 0", flush=True)
 
 
 if __name__ == "__main__":
