@@ -61,6 +61,8 @@ def _route_header(route, original_title=""):
     if route == "only_panathinaikos_x":
         return "☘️ <b>ONLY PANATHINAIKOS X</b>"
     if route == "google_news_web":
+        if "TRANSFERFEED" in title_upper:
+            return "🔄 <b>DIRECT | TRANSFERFEED</b>"
         return "📰 <b>GOOGLE NEWS + WEB</b>"
     if route == "youtube_pao":
         return "📺 <b>YOUTUBE PAO</b>"
