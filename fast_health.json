@@ -168,61 +168,61 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 5440,
-  "runner_started_or_alive_at": "2026-09-03T19:25:27.345573+00:00",
+  "cycle": 5441,
+  "runner_started_or_alive_at": "2026-09-03T19:27:27.378971+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-09-03T19:25:36.102355+00:00",
+      "last_ok": "2026-09-03T19:27:35.974226+00:00",
       "last_error": null,
-      "last_duration_seconds": 8.76,
+      "last_duration_seconds": 8.6,
       "last_attempt": "2026-09-03T18:05:44.399000+00:00"
     },
     "only_panathinaikos_x": {
       "status": "ok",
       "last_attempt": "2026-09-03T10:40:19.054477+00:00",
       "last_error": null,
-      "last_duration_seconds": 8.37,
-      "last_ok": "2026-09-03T19:25:44.473953+00:00"
+      "last_duration_seconds": 7.76,
+      "last_ok": "2026-09-03T19:27:43.735296+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-09-03T19:26:07.939581+00:00",
+      "last_ok": "2026-09-03T19:28:08.783495+00:00",
       "last_error": null,
-      "last_duration_seconds": 23.47,
+      "last_duration_seconds": 25.05,
       "last_attempt": "2026-08-27T23:30:41.775583+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-09-03T19:26:52.333236+00:00",
+      "last_ok": "2026-09-03T19:30:35.940206+00:00",
       "last_error": null,
-      "last_duration_seconds": 44.39,
+      "last_duration_seconds": 44.3,
       "last_attempt": "2026-09-02T02:47:21.983806+00:00"
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-09-03T19:26:52.772759+00:00",
+      "last_ok": "2026-09-03T19:30:35.941634+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.44,
+      "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
     },
     "conference_opponents": {
       "status": "ok",
-      "last_ok": "2026-09-03T19:26:07.941040+00:00",
+      "last_ok": "2026-09-03T19:29:51.644048+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.0,
+      "last_duration_seconds": 102.86,
       "last_attempt": "2026-08-30T15:33:08.872302+00:00"
     },
     "transferfeed_panathinaikos": {
       "status": "ok",
-      "last_ok": "2026-09-03T19:26:07.939635+00:00",
+      "last_ok": "2026-09-03T19:28:08.783559+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-31T20:03:11.613355+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-09-03T19:26:52.772792+00:00",
-  "last_cycle_duration_seconds": 85.43,
+  "last_cycle_finished_at": "2026-09-03T19:30:35.941655+00:00",
+  "last_cycle_duration_seconds": 188.56,
   "ntfy": {
     "local_budget_day_utc": "2026-09-03",
     "local_successful_publications": 1,
@@ -232,9 +232,9 @@
     "outbox_pending": 0,
     "telegram": {
       "configured": true,
-      "last_ok": "2026-09-03T19:25:44.468993+00:00",
+      "last_ok": "2026-09-03T19:27:43.730235+00:00",
       "last_error": null,
-      "successful_sends": 275,
+      "successful_sends": 278,
       "failed_sends": 0
     }
   }
