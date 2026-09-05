@@ -28,6 +28,8 @@ jobs:
     env:
       PYTHONUNBUFFERED: "1"
       TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 }}
+      TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
+      TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
       # Safe migration phase: Railway keeps real delivery while this public
       # runner builds an identical no-replay baseline. We flip this only after
       # Telegram credentials/recipients are verified here.
