@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "direct_news_free/watcher.py"
+      - "direct_news_free/bootstrap.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
   schedule:
@@ -51,7 +52,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py
+          python -m py_compile watcher.py bootstrap.py
           python - <<'PY'
           import watcher
           counts = {
@@ -70,6 +71,10 @@ jobs:
           }, counts
           assert total == 125
           PY
+
+      - name: Fast no-replay shadow baseline
+        working-directory: direct_news_free
+        run: python bootstrap.py
 
       - name: Run Railway-free shadow watcher
         working-directory: direct_news_free
