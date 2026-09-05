@@ -1,0 +1,77 @@
+name: PAO Direct News Self-Heal
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 * * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: pao-direct-news-self-heal
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify direct-news runner and heartbeat
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          active_runs="$(
+            gh run list --repo "$GITHUB_REPOSITORY" --workflow direct-news-free.yml --limit 8 \
+              --json databaseId,status,createdAt \
+              --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "waiting" or .status == "requested" or .status == "pending")]'
+          )"
+          active="$(jq 'length' <<<"$active_runs")"
+
+          youngest_age="$(python - "$active_runs" <<'PY'
+          import json, sys
+          from datetime import datetime, timezone
+          runs=json.loads(sys.argv[1])
+          now=datetime.now(timezone.utc)
+          ages=[]
+          for run in runs:
+              raw=run.get("createdAt")
+              if raw:
+                  dt=datetime.fromisoformat(raw.replace("Z","+00:00"))
+                  ages.append((now-dt).total_seconds())
+          print(int(min(ages)) if ages else 999999)
+          PY
+          )"
+
+          heartbeat_age="$(python - <<'PY'
+          import json, urllib.request
+          from datetime import datetime, timezone
+          url='https://raw.githubusercontent.com/andremoschos/pao-x-alert/main/direct_news_free/direct_news_health.json'
+          try:
+              with urllib.request.urlopen(url, timeout=10) as r:
+                  data=json.load(r)
+              raw=data.get('last_cycle_finished_at') or data.get('runner_alive_at') or data.get('checked_at')
+              dt=datetime.fromisoformat(raw.replace('Z','+00:00'))
+              print(max(0,int((datetime.now(timezone.utc)-dt.astimezone(timezone.utc)).total_seconds())))
+          except Exception:
+              print(999999)
+          PY
+          )"
+
+          echo "direct-news active=$active youngest_age=${youngest_age}s heartbeat_age=${heartbeat_age}s"
+
+          if [ "$active" -gt 0 ] && { [ "$youngest_age" -le 900 ] || [ "$heartbeat_age" -le 900 ]; }; then
+            echo "Direct-news watcher healthy."
+            exit 0
+          fi
+
+          echo "Direct-news watcher missing/stale; repairing."
+          jq -r '.[].databaseId' <<<"$active_runs" | while read -r run_id; do
+            [ -z "$run_id" ] || gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true
+          done
+          gh workflow run direct-news-free.yml --repo "$GITHUB_REPOSITORY" --ref main
+          echo "Fresh direct-news runner dispatched."
