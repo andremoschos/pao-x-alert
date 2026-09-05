@@ -2,6 +2,10 @@ name: PAO Direct News Self-Heal
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/direct-news-self-heal.yml"
   schedule:
     - cron: "37 * * * *"
 
