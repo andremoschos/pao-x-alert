@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Production runner wrapper with a loss-averse per-source fallback.
+"""Production runner wrapper with fallback coverage and private Telegram routing.
 
 Some publishers reject GitHub-hosted IPs (403/429/503), return a challenge
 response, or render no article anchors server-side. We never remove those
 sources. When their direct page fails or yields zero links, this wrapper scans a
 site-scoped Google News RSS feed for that exact publisher and Panathinaikos.
-The direct URL remains the preferred lane and the fallback is only used while
-that source is degraded.
+
+This repository is public so GitHub-hosted standard runners remain free. Telegram
+recipient IDs are therefore never written to the committed state file: they are
+read from Actions secrets when supplied, or discovered in memory from /start
+updates for the current run only.
 """
 import asyncio
+import os
 from urllib.parse import quote, urlparse
 
 import feedparser
@@ -18,7 +22,51 @@ import watcher
 
 
 _original_process_source = watcher.process_source
+_original_load_state = watcher.load_state
 FALLBACK_MAX_ITEMS = 80
+
+
+def load_state_without_private_recipients():
+    state = _original_load_state()
+    # Never persist Telegram chat IDs in this public repository.
+    state["recipients"] = {}
+    return state
+
+
+async def discover_recipients_private(session, state):
+    primary = os.getenv("TELEGRAM_PRIMARY_CHAT_ID", "").strip()
+    mirror = os.getenv("TELEGRAM_MIRROR_CHAT_ID", "").strip()
+    if primary and mirror and primary != mirror:
+        return primary, mirror
+
+    if not watcher.TOKEN:
+        return None
+
+    # Read-only fallback discovery. Do not write the discovered IDs to state.
+    try:
+        async with session.get(
+            f"https://api.telegram.org/bot{watcher.TOKEN}/getUpdates",
+            timeout=watcher.aiohttp.ClientTimeout(total=watcher.HTTP_TIMEOUT),
+        ) as response:
+            payload = await response.json(content_type=None)
+        starts = []
+        for update in payload.get("result", []):
+            message = update.get("message") or update.get("edited_message")
+            chat = (message or {}).get("chat") or {}
+            if not message or chat.get("type") != "private" or chat.get("id") is None:
+                continue
+            if not str(message.get("text", "") or "").strip().casefold().startswith("/start"):
+                continue
+            starts.append((int(update.get("update_id", 0) or 0), str(chat["id"])))
+        latest = {}
+        for update_id, chat_id in sorted(starts):
+            latest[chat_id] = update_id
+        ordered = sorted(latest, key=lambda chat_id: latest[chat_id])
+        if len(ordered) >= 2:
+            return ordered[-1], ordered[-2]
+    except Exception as exc:
+        watcher.log.warning("Private Telegram recipient discovery failed: %s", exc)
+    return None
 
 
 def _domain(source):
@@ -133,6 +181,8 @@ async def process_source_with_fallback(session, state, source, health):
         slot["effective_status"] = "error"
 
 
+watcher.load_state = load_state_without_private_recipients
+watcher.discover_recipients = discover_recipients_private
 watcher.process_source = process_source_with_fallback
 
 
