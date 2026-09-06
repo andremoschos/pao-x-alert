@@ -118,6 +118,7 @@ def _safe_text(route, title, body, click=None):
         text = text[:3970].rstrip() + "\n…"
     return text
 
+
 def send(route, title, body, click=None):
     global _last_ok, _last_error, _successful_sends, _failed_sends
 
@@ -177,7 +178,6 @@ def send(route, title, body, click=None):
     return True
 
 
-
 def _route_target(route):
     thread = THREADS.get(route, "")
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
@@ -220,86 +220,29 @@ def _telegram_api(method, payload):
 
 
 def send_x_post(route, tweet):
-    """Send an X post with inline media when Telegram can fetch the media URLs.
+    """Send X alerts in the original lightweight text-only format.
 
-    Returns True only when the post itself was delivered. Media failure falls
-    back to the normal text alert, so notification delivery is never lost.
+    Media is intentionally not embedded and link previews stay disabled. This
+    keeps X alerts compact and avoids rendering the whole post in Telegram.
     """
-    global _last_ok, _last_error, _successful_sends, _failed_sends
+    author = str(tweet.get("author") or "").strip()
+    text = " ".join(str(tweet.get("text") or "").split()).strip()
+    if len(text) > 280:
+        text = text[:277].rstrip() + "…"
 
-    if not configured():
-        _last_error = "Telegram secrets missing"
-        return False
-
-    chat_id, thread_id = _route_target(route)
-    media = [
-        item for item in list(tweet.get("media") or [])
-        if isinstance(item, dict)
-        and item.get("url")
-        and item.get("type") in {"photo", "video"}
-    ][:10]
-
-    caption = _x_caption(route, tweet)
-
-    if media:
-        try:
-            if len(media) == 1:
-                item = media[0]
-                method = "sendPhoto" if item["type"] == "photo" else "sendVideo"
-                key = "photo" if item["type"] == "photo" else "video"
-                payload = {
-                    "chat_id": chat_id,
-                    key: item["url"],
-                    "caption": caption,
-                    "parse_mode": "HTML",
-                    "disable_notification": False,
-                }
-                if thread_id is not None:
-                    payload["message_thread_id"] = thread_id
-                response = _telegram_api(method, payload)
-            else:
-                telegram_media = []
-                for index, item in enumerate(media):
-                    entry = {
-                        "type": item["type"],
-                        "media": item["url"],
-                    }
-                    if index == 0:
-                        entry["caption"] = caption
-                        entry["parse_mode"] = "HTML"
-                    telegram_media.append(entry)
-
-                payload = {
-                    "chat_id": chat_id,
-                    "media": telegram_media,
-                    "disable_notification": False,
-                }
-                if thread_id is not None:
-                    payload["message_thread_id"] = thread_id
-                response = _telegram_api("sendMediaGroup", payload)
-
-            if response.status_code == 200 and response.json().get("ok"):
-                _last_ok = datetime.now(timezone.utc).isoformat()
-                _last_error = None
-                _successful_sends += 1
-                return True
-
-            _last_error = (
-                f"Telegram media HTTP {response.status_code} route={route}; "
-                "falling back to text"
-            )
-        except Exception as exc:
-            _last_error = (
-                f"{type(exc).__name__}: Telegram media send failed route={route}; "
-                "falling back to text"
-            )
+    body_parts = []
+    if author:
+        body_parts.append(author)
+    if text:
+        body_parts.append(text)
 
     return send(
         route,
         "X POST",
-        f'{tweet.get("author", "")}\n{tweet.get("text", "")}',
+        "\n".join(body_parts),
         tweet.get("url"),
     )
+
 
 def send_for_ntfy(url, kwargs):
     route = _route_for_ntfy_url(url)
