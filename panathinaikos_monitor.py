@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import requests
 import telegram_delivery as telegram
+import x_rsshub_fallback as rss_x
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
@@ -299,7 +300,23 @@ async def fetch_latest():
             f"Panathinaikos twscrape failed: {exc}; trying Chromium search fallback",
             flush=True,
         )
+
+    try:
         return await fetch_latest_browser()
+    except Exception as exc:
+        print(
+            f"Panathinaikos Chromium failed: {exc}; trying verified RSSHub fallback",
+            flush=True,
+        )
+
+    tweets = await asyncio.to_thread(
+        rss_x.fetch_many_keywords,
+        ["Panathinaikos", "#Panathinaikos"],
+        80,
+    )
+    if not tweets:
+        raise RuntimeError("RSSHub Only Panathinaikos X fallback returned 0 posts")
+    return tweets
 
 
 async def main():
