@@ -1,5 +1,7 @@
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 import requests
@@ -20,20 +22,27 @@ PATHS = [
 ]
 
 
+def snowflake_datetime(tweet_id):
+    ms = (int(tweet_id) >> 22) + 1288834974657
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
+
+
 def inspect(url):
     try:
         r = requests.get(
             url,
             timeout=12,
             headers={
-                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.1",
+                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.2",
                 "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
             },
         )
         text = r.text
-        status_refs = text.count("/status/")
+        ids = [int(x) for x in re.findall(r"/status/(\d+)", text)]
+        status_refs = len(ids)
         x_refs = text.count("x.com/") + text.count("twitter.com/")
         feedish = any(marker in text[:1000].lower() for marker in ("<rss", "<feed", "<?xml"))
+        latest_id = max(ids) if ids else None
         result = {
             "url": url,
             "status": r.status_code,
@@ -41,6 +50,8 @@ def inspect(url):
             "feedish": feedish,
             "status_refs": status_refs,
             "x_refs": x_refs,
+            "latest_id": str(latest_id) if latest_id else None,
+            "latest_at": snowflake_datetime(latest_id) if latest_id else None,
             "content_type": r.headers.get("content-type", ""),
             "preview": " ".join(text[:180].split()),
         }
