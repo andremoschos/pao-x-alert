@@ -1,4 +1,5 @@
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import quote
 
 import requests
@@ -23,9 +24,9 @@ def inspect(url):
     try:
         r = requests.get(
             url,
-            timeout=25,
+            timeout=12,
             headers={
-                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.0",
+                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.1",
                 "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
             },
         )
@@ -33,20 +34,17 @@ def inspect(url):
         status_refs = text.count("/status/")
         x_refs = text.count("x.com/") + text.count("twitter.com/")
         feedish = any(marker in text[:1000].lower() for marker in ("<rss", "<feed", "<?xml"))
-        print(
-            "RSSHUB_DIAG",
-            {
-                "url": url,
-                "status": r.status_code,
-                "len": len(text),
-                "feedish": feedish,
-                "status_refs": status_refs,
-                "x_refs": x_refs,
-                "content_type": r.headers.get("content-type", ""),
-                "preview": " ".join(text[:180].split()),
-            },
-            flush=True,
-        )
+        result = {
+            "url": url,
+            "status": r.status_code,
+            "len": len(text),
+            "feedish": feedish,
+            "status_refs": status_refs,
+            "x_refs": x_refs,
+            "content_type": r.headers.get("content-type", ""),
+            "preview": " ".join(text[:180].split()),
+        }
+        print("RSSHUB_DIAG", result, flush=True)
         return r.status_code == 200 and feedish and status_refs > 0
     except Exception as exc:
         print("RSSHUB_DIAG", {"url": url, "error": f"{type(exc).__name__}: {exc}"}, flush=True)
@@ -54,14 +52,14 @@ def inspect(url):
 
 
 def main():
+    urls = [host + path for host in HOSTS for path in PATHS]
     successes = 0
-    total = 0
-    for host in HOSTS:
-        for path in PATHS:
-            total += 1
-            if inspect(host + path):
+    with ThreadPoolExecutor(max_workers=len(urls)) as pool:
+        futures = {pool.submit(inspect, url): url for url in urls}
+        for future in as_completed(futures):
+            if future.result():
                 successes += 1
-    print(f"RSSHUB_DIAG_SUMMARY successes={successes}/{total}", flush=True)
+    print(f"RSSHUB_DIAG_SUMMARY successes={successes}/{len(urls)}", flush=True)
     if successes == 0:
         sys.exit(2)
 
