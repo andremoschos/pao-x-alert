@@ -18,6 +18,7 @@ COMBINED = (
     '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
     'from:paobc OR from:fmeetsdata'
 )
+OFFICIAL_COMBINED = "from:paofc_ OR from:Paobcgr OR from:acpanathinaikos"
 
 PATHS = [
     "/twitter/user/paofc_/exclude_rts_replies",
@@ -26,6 +27,7 @@ PATHS = [
     "/twitter/keyword/" + quote("Panathinaikos", safe=""),
     "/twitter/keyword/" + quote("Παναθηναϊκός", safe=""),
     "/twitter/keyword/" + quote(COMBINED, safe=""),
+    "/twitter/keyword/" + quote(OFFICIAL_COMBINED, safe=""),
 ]
 
 
@@ -40,7 +42,7 @@ def inspect(url):
             url,
             timeout=12,
             headers={
-                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.3",
+                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.4",
                 "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
             },
         )
