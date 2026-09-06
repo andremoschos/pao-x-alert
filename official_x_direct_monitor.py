@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import requests
+import x_rsshub_fallback as rss_x
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
@@ -173,6 +174,24 @@ async def fetch_source_browser(source):
             await browser.close()
 
 
+async def fetch_source_rsshub(source):
+    items = await asyncio.to_thread(rss_x.fetch_user, source["username"], FETCH_LIMIT)
+    out = []
+    for item in items:
+        username = str(item.get("author") or "").strip().lstrip("@") or source["username"]
+        out.append(
+            SimpleTweet(
+                id=int(item["id"]),
+                rawContent=str(item.get("text") or "").strip(),
+                user=SimpleUser(username=username),
+            )
+        )
+    if not out:
+        raise RuntimeError(f"RSSHub returned 0 own posts for @{source['username']}")
+    print(f"{source['key']} X RSSHub fallback: {len(out)} posts", flush=True)
+    return out
+
+
 async def fetch_source(api, source):
     if api is not None:
         try:
@@ -187,7 +206,15 @@ async def fetch_source(api, source):
             f"{source['key']} twscrape unavailable; using Chromium profile fallback",
             flush=True,
         )
-    return await fetch_source_browser(source)
+
+    try:
+        return await fetch_source_browser(source)
+    except Exception as exc:
+        print(
+            f"{source['key']} Chromium failed: {exc}; trying verified RSSHub user feed",
+            flush=True,
+        )
+    return await fetch_source_rsshub(source)
 
 
 async def make_api_or_none():
@@ -201,7 +228,7 @@ async def make_api_or_none():
     except Exception as exc:
         print(
             f"Official X twscrape setup failed: {type(exc).__name__}: {exc}; "
-            "using Chromium-only recovery",
+            "using Chromium/RSSHub recovery",
             flush=True,
         )
         return None
