@@ -238,14 +238,37 @@ async def fetch_latest_browser():
 
 
 async def fetch_latest():
-    # The verified public RSS route is now first so GitHub/Azure 403s no longer
-    # slow or break the 2-minute scanner. Authenticated X paths remain fallbacks.
+    # Try the compact combined feed first. Some RSSHub instances intermittently
+    # reject complex OR queries, so immediately recover with several simple
+    # keyword feeds before touching authenticated X. This avoids GitHub/Azure
+    # 403/empty-search failures while keeping the same coverage.
     try:
         tweets = await asyncio.to_thread(rss_x.fetch_general, 100)
         if tweets:
             return tweets
     except Exception as exc:
-        print(f"X RSS feed failed: {exc}; trying authenticated twscrape", flush=True)
+        print(f"X combined RSS feed failed: {exc}; trying simple RSS feeds", flush=True)
+
+    try:
+        tweets = await asyncio.to_thread(
+            rss_x.fetch_many_keywords,
+            [
+                "παναθηναϊκός",
+                "παναθηναϊκού",
+                "παναθηναϊκό",
+                "παναθηναικος",
+                "παναθηναικου",
+                "παναθηναικο",
+                "from:paobc",
+                "from:fmeetsdata",
+            ],
+            100,
+        )
+        if tweets:
+            print(f"X simple RSS recovery results: {len(tweets)}", flush=True)
+            return tweets
+    except Exception as exc:
+        print(f"X simple RSS feeds failed: {exc}; trying authenticated twscrape", flush=True)
 
     try:
         return await fetch_latest_twscrape()
