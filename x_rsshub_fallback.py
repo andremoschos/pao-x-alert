@@ -8,19 +8,26 @@ from xml.etree import ElementTree as ET
 import requests
 
 # Public RSSHub instances verified from GitHub-hosted runners on 2026-09-06.
-# Direct X remains primary; these are read-only fallbacks when X blocks the runner.
-# folo currently carries fresh PAO user + keyword feeds. stsecurity is kept only
-# as a secondary user-feed fallback and is rejected when its mirror is stale.
+# They are read-only X feed mirrors; authenticated X remains as fallback in the
+# caller if the RSS route is unavailable.
 USER_HOSTS = [
     "https://rsshub-container.folo.is",
+    "https://rss.xxu.do",
     "https://rsshub.stsecurity.moe",
 ]
 KEYWORD_HOSTS = [
     "https://rsshub-container.folo.is",
     "https://rsshub.stsecurity.moe",
+    "https://rss.xxu.do",
 ]
 TIMEOUT = 12
 USER_MAX_AGE = timedelta(days=14)
+
+GENERAL_QUERY = (
+    '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
+    '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
+    'from:paobc OR from:fmeetsdata'
+)
 
 
 def snowflake_datetime(tweet_id):
@@ -56,7 +63,6 @@ def _parse_rss(content, limit=100):
             flags=re.I,
         )
         if not match:
-            # Some RSSHub descriptions contain the status link instead of <link>.
             raw = ET.tostring(item, encoding="unicode")
             match = re.search(
                 r"https?://(?:www\.)?(?:x\.com|twitter\.com)/([^/?#]+)/status/(\d+)",
@@ -82,7 +88,7 @@ def _parse_rss(content, limit=100):
 def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
     headers = {
-        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.1",
+        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.2",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
     }
     for host in hosts:
@@ -104,7 +110,7 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
                     )
                     continue
             print(
-                f"X RSSHub fallback {label}: {len(tweets)} posts via {host}; "
+                f"X RSSHub {label}: {len(tweets)} posts via {host}; "
                 f"latest={tweets[0]['created'].isoformat()}",
                 flush=True,
             )
@@ -112,7 +118,7 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
         except Exception as exc:
             errors.append(f"{host} {type(exc).__name__}: {exc}")
     raise RuntimeError(
-        f"RSSHub X fallback failed for {label}: " + "; ".join(errors[-len(hosts):])
+        f"RSSHub X feed failed for {label}: " + "; ".join(errors[-len(hosts):])
     )
 
 
@@ -159,27 +165,12 @@ def fetch_many_keywords(queries, limit=100):
 
     tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)[:limit]
     if not tweets:
-        raise RuntimeError("RSSHub keyword fallback returned 0 posts: " + "; ".join(errors[-4:]))
+        raise RuntimeError("RSSHub keyword feed returned 0 posts: " + "; ".join(errors[-4:]))
     return tweets
 
 
 def fetch_general(limit=100):
-    # Equivalent coverage to the primary Greek PAO query, using smaller feeds
-    # because public RSSHub keyword endpoints are more reliable with compact terms.
-    queries = [
-        "Παναθηναϊκός",
-        "Παναθηναϊκού",
-        "Παναθηναϊκό",
-        "παναθηναικος",
-    ]
-    found = {tweet["id"]: tweet for tweet in fetch_many_keywords(queries, limit=limit)}
-
-    # Preserve the two account-specific clauses from the primary query when available.
-    for username in ("paobc", "fmeetsdata"):
-        try:
-            for tweet in fetch_user(username, limit=40):
-                found[tweet["id"]] = tweet
-        except Exception as exc:
-            print(f"X RSSHub optional @{username} feed unavailable: {exc}", flush=True)
-
-    return sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)[:limit]
+    # The same complete query used by the authenticated scanner. The combined
+    # route was verified to return a fresh 40-post feed, so one request replaces
+    # several separate keyword/account calls.
+    return fetch_keyword(GENERAL_QUERY, limit=limit)
