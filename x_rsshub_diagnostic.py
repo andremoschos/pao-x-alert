@@ -13,12 +13,19 @@ HOSTS = [
     "https://rsshub-container.folo.is",
 ]
 
+COMBINED = (
+    '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
+    '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
+    'from:paobc OR from:fmeetsdata'
+)
+
 PATHS = [
     "/twitter/user/paofc_/exclude_rts_replies",
     "/twitter/user/Paobcgr/exclude_rts_replies",
     "/twitter/user/acpanathinaikos/exclude_rts_replies",
     "/twitter/keyword/" + quote("Panathinaikos", safe=""),
     "/twitter/keyword/" + quote("Παναθηναϊκός", safe=""),
+    "/twitter/keyword/" + quote(COMBINED, safe=""),
 ]
 
 
@@ -33,7 +40,7 @@ def inspect(url):
             url,
             timeout=12,
             headers={
-                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.2",
+                "User-Agent": "PAO-Watcher-RSSHub-Diagnostic/1.3",
                 "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
             },
         )
