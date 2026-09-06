@@ -1,0 +1,32 @@
+name: X RSSHub Fallback Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - x_rsshub_diagnostic.py
+      - .github/workflows/x-rsshub-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-rsshub-x:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Test RSSHub X feeds
+        run: python x_rsshub_diagnostic.py
