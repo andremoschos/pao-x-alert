@@ -238,10 +238,6 @@ async def fetch_latest_browser():
 
 
 async def fetch_latest():
-    # Try the compact combined feed first. Some RSSHub instances intermittently
-    # reject complex OR queries, so immediately recover with several simple
-    # keyword feeds before touching authenticated X. This avoids GitHub/Azure
-    # 403/empty-search failures while keeping the same coverage.
     try:
         tweets = await asyncio.to_thread(rss_x.fetch_general, 100)
         if tweets:
@@ -268,7 +264,19 @@ async def fetch_latest():
             print(f"X simple RSS recovery results: {len(tweets)}", flush=True)
             return tweets
     except Exception as exc:
-        print(f"X simple RSS feeds failed: {exc}; trying authenticated twscrape", flush=True)
+        print(f"X simple RSS feeds failed: {exc}; trying verified Panathinaikos RSS lane", flush=True)
+
+    try:
+        tweets = await asyncio.to_thread(
+            rss_x.fetch_many_keywords,
+            ["Panathinaikos", "#Panathinaikos"],
+            100,
+        )
+        if tweets:
+            print(f"X verified Panathinaikos RSS recovery results: {len(tweets)}", flush=True)
+            return tweets
+    except Exception as exc:
+        print(f"X verified Panathinaikos RSS lane failed: {exc}; trying authenticated twscrape", flush=True)
 
     try:
         return await fetch_latest_twscrape()
