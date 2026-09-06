@@ -52,7 +52,6 @@ def save_state(ids):
     )
 
 
-
 def _extract_media_from_twscrape(tweet):
     media = []
     container = getattr(tweet, "media", None)
@@ -80,7 +79,6 @@ def _extract_media_from_twscrape(tweet):
             candidates.sort(reverse=True)
             media.append({"type": "video", "url": candidates[0][1]})
 
-    # Preserve order while removing duplicate URLs.
     out = []
     seen_urls = set()
     for item in media:
@@ -181,7 +179,7 @@ async def fetch_latest_twscrape():
 
 
 async def fetch_latest_browser():
-    """Authenticated Chromium fallback for X search when twscrape/GraphQL breaks."""
+    """Authenticated Chromium fallback for X search when other routes fail."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
         context = await browser.new_context(
@@ -220,26 +218,13 @@ async def fetch_latest_browser():
                     if not match:
                         continue
                     username, tid = match.group(1), match.group(2)
-                    media = []
-                    image_nodes = article.locator('img[src*="pbs.twimg.com/media"]')
-                    for k in range(min(await image_nodes.count(), 10)):
-                        src = (await image_nodes.nth(k).get_attribute("src") or "").strip()
-                        if src:
-                            media.append({"type": "photo", "url": src})
-
-                    video_nodes = article.locator('video source')
-                    for k in range(min(await video_nodes.count(), 4)):
-                        src = (await video_nodes.nth(k).get_attribute("src") or "").strip()
-                        if src.startswith("https://"):
-                            media.append({"type": "video", "url": src})
-
                     found[tid] = {
                         "id": tid,
                         "author": f"@{username}",
                         "text": text or "(post without text)",
                         "url": f"https://x.com/{username}/status/{tid}",
                         "created": snowflake_datetime(int(tid)),
-                        "media": media[:10],
+                        "media": [],
                     }
                     break
 
@@ -253,21 +238,21 @@ async def fetch_latest_browser():
 
 
 async def fetch_latest():
+    # The verified public RSS route is now first so GitHub/Azure 403s no longer
+    # slow or break the 2-minute scanner. Authenticated X paths remain fallbacks.
+    try:
+        tweets = await asyncio.to_thread(rss_x.fetch_general, 100)
+        if tweets:
+            return tweets
+    except Exception as exc:
+        print(f"X RSS feed failed: {exc}; trying authenticated twscrape", flush=True)
+
     try:
         return await fetch_latest_twscrape()
     except Exception as exc:
         print(f"X twscrape failed: {exc}; trying Chromium search fallback", flush=True)
 
-    try:
-        return await fetch_latest_browser()
-    except Exception as exc:
-        print(f"X Chromium failed: {exc}; trying verified RSSHub fallback", flush=True)
-
-    # Network I/O is synchronous in the helper, so keep it off the event loop.
-    tweets = await asyncio.to_thread(rss_x.fetch_general, 100)
-    if not tweets:
-        raise RuntimeError("RSSHub X general fallback returned 0 posts")
-    return tweets
+    return await fetch_latest_browser()
 
 
 async def main():
