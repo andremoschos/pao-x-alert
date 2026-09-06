@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import requests
 import telegram_delivery as telegram
+import x_rsshub_fallback as rss_x
 from twscrape import API, gather
 from playwright.async_api import async_playwright
 
@@ -256,7 +257,17 @@ async def fetch_latest():
         return await fetch_latest_twscrape()
     except Exception as exc:
         print(f"X twscrape failed: {exc}; trying Chromium search fallback", flush=True)
+
+    try:
         return await fetch_latest_browser()
+    except Exception as exc:
+        print(f"X Chromium failed: {exc}; trying verified RSSHub fallback", flush=True)
+
+    # Network I/O is synchronous in the helper, so keep it off the event loop.
+    tweets = await asyncio.to_thread(rss_x.fetch_general, 100)
+    if not tweets:
+        raise RuntimeError("RSSHub X general fallback returned 0 posts")
+    return tweets
 
 
 async def main():
