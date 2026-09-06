@@ -11,6 +11,7 @@ on:
       - "fast_runner_v2.py"
       - "monitor.py"
       - "panathinaikos_monitor.py"
+      - "x_rsshub_fallback.py"
       - "google_monitor.py"
       - "google_fast_adapter.py"
       - "conference_opponents_monitor.py"
@@ -81,6 +82,7 @@ jobs:
             fast_runner_v2.py \
             monitor.py \
             panathinaikos_monitor.py \
+            x_rsshub_fallback.py \
             google_monitor.py \
             google_fast_adapter.py \
             conference_opponents_monitor.py \
