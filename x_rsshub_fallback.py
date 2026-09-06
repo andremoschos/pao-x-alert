@@ -1,8 +1,7 @@
 import html
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from urllib.parse import quote
 from xml.etree import ElementTree as ET
 
@@ -10,15 +9,18 @@ import requests
 
 # Public RSSHub instances verified from GitHub-hosted runners on 2026-09-06.
 # Direct X remains primary; these are read-only fallbacks when X blocks the runner.
+# folo currently carries fresh PAO user + keyword feeds. stsecurity is kept only
+# as a secondary user-feed fallback and is rejected when its mirror is stale.
 USER_HOSTS = [
-    "https://rsshub.stsecurity.moe",
     "https://rsshub-container.folo.is",
+    "https://rsshub.stsecurity.moe",
 ]
 KEYWORD_HOSTS = [
     "https://rsshub-container.folo.is",
     "https://rsshub.stsecurity.moe",
 ]
 TIMEOUT = 12
+USER_MAX_AGE = timedelta(days=14)
 
 
 def snowflake_datetime(tweet_id):
@@ -77,10 +79,10 @@ def _parse_rss(content, limit=100):
     return sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)
 
 
-def _fetch_path(path, hosts, label, limit):
+def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
     headers = {
-        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.0",
+        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.1",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
     }
     for host in hosts:
@@ -91,13 +93,22 @@ def _fetch_path(path, hosts, label, limit):
                 errors.append(f"{host} HTTP {response.status_code}")
                 continue
             tweets = _parse_rss(response.content, limit=limit)
-            if tweets:
-                print(
-                    f"X RSSHub fallback {label}: {len(tweets)} posts via {host}",
-                    flush=True,
-                )
-                return tweets
-            errors.append(f"{host} empty feed")
+            if not tweets:
+                errors.append(f"{host} empty feed")
+                continue
+            if max_age is not None:
+                age = datetime.now(timezone.utc) - tweets[0]["created"]
+                if age > max_age:
+                    errors.append(
+                        f"{host} stale feed latest={tweets[0]['created'].isoformat()}"
+                    )
+                    continue
+            print(
+                f"X RSSHub fallback {label}: {len(tweets)} posts via {host}; "
+                f"latest={tweets[0]['created'].isoformat()}",
+                flush=True,
+            )
+            return tweets
         except Exception as exc:
             errors.append(f"{host} {type(exc).__name__}: {exc}")
     raise RuntimeError(
@@ -112,6 +123,7 @@ def fetch_user(username, limit=40):
         USER_HOSTS,
         f"user @{safe_username}",
         limit,
+        max_age=USER_MAX_AGE,
     )
 
 
