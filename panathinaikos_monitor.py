@@ -18,9 +18,6 @@ ENGINE = "twscrape_panathinaikos_only_v1"
 MAX_SEEN = 5000
 MAX_NTFY_BODY_BYTES = 3500
 
-# X occasionally returns an empty SearchTimeline for the bare lowercase term
-# even while the Latest tab visibly contains results. Try an explicit exact/
-# hashtag query first, then two compact fallbacks before using Chromium.
 SEARCH_QUERIES = [
     '"Panathinaikos" OR #Panathinaikos',
     'Panathinaikos',
@@ -58,7 +55,6 @@ def save_state(ids):
     )
 
 
-
 def _extract_media_from_twscrape(tweet):
     media = []
     container = getattr(tweet, "media", None)
@@ -86,7 +82,6 @@ def _extract_media_from_twscrape(tweet):
             candidates.sort(reverse=True)
             media.append({"type": "video", "url": candidates[0][1]})
 
-    # Preserve order while removing duplicate URLs.
     out = []
     seen_urls = set()
     for item in media:
@@ -195,8 +190,6 @@ async def fetch_latest_twscrape():
             flush=True,
         )
 
-        # The first explicit query is enough when healthy. Only spend extra X
-        # requests when the prior attempt actually returned nothing.
         if found:
             break
 
@@ -293,6 +286,22 @@ async def fetch_latest_browser():
 
 
 async def fetch_latest():
+    # Use the verified public feed first. This avoids wasting most of the cycle
+    # on X/Azure anti-bot failures while keeping authenticated paths as backup.
+    try:
+        tweets = await asyncio.to_thread(
+            rss_x.fetch_many_keywords,
+            ["Panathinaikos", "#Panathinaikos"],
+            80,
+        )
+        if tweets:
+            return tweets
+    except Exception as exc:
+        print(
+            f"Panathinaikos RSS feed failed: {exc}; trying authenticated twscrape",
+            flush=True,
+        )
+
     try:
         return await fetch_latest_twscrape()
     except Exception as exc:
@@ -301,22 +310,7 @@ async def fetch_latest():
             flush=True,
         )
 
-    try:
-        return await fetch_latest_browser()
-    except Exception as exc:
-        print(
-            f"Panathinaikos Chromium failed: {exc}; trying verified RSSHub fallback",
-            flush=True,
-        )
-
-    tweets = await asyncio.to_thread(
-        rss_x.fetch_many_keywords,
-        ["Panathinaikos", "#Panathinaikos"],
-        80,
-    )
-    if not tweets:
-        raise RuntimeError("RSSHub Only Panathinaikos X fallback returned 0 posts")
-    return tweets
+    return await fetch_latest_browser()
 
 
 async def main():
@@ -342,8 +336,6 @@ async def main():
             print("Sent:", tweet["url"])
         print(f"Only Panathinaikos X ntfy batch sent: {len(batch)} posts", flush=True)
 
-    # Keep every result in state after this cycle. The 2-hour recovery window
-    # protects delayed indexing, while persistent IDs prevent duplicates.
     previous.update(t["id"] for t in tweets)
     save_state(previous)
     print(f"Fresh Panathinaikos posts: {len(fresh)}")
