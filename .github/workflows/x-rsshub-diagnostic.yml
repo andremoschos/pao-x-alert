@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - x_rsshub_diagnostic.py
+      - x_rsshub_fallback.py
       - .github/workflows/x-rsshub-diagnostic.yml
 
 permissions:
@@ -30,3 +31,14 @@ jobs:
 
       - name: Test RSSHub X feeds
         run: python x_rsshub_diagnostic.py
+
+      - name: Verify production fallback parser
+        run: |
+          python - <<'PY'
+          import x_rsshub_fallback as x
+          official = x.fetch_user('paofc_', 10)
+          keyword = x.fetch_keyword('Panathinaikos', 10)
+          assert official and keyword
+          assert all(item['id'].isdigit() and '/status/' in item['url'] for item in official + keyword)
+          print('RSSHUB_PRODUCTION_SMOKE', {'official': len(official), 'keyword': len(keyword), 'official_latest': official[0]['url'], 'keyword_latest': keyword[0]['url']})
+          PY
