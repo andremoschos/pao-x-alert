@@ -188,11 +188,22 @@ async def fetch_source_rsshub(source):
         )
     if not out:
         raise RuntimeError(f"RSSHub returned 0 own posts for @{source['username']}")
-    print(f"{source['key']} X RSSHub fallback: {len(out)} posts", flush=True)
+    print(f"{source['key']} X RSS feed: {len(out)} posts", flush=True)
     return out
 
 
 async def fetch_source(api, source):
+    # Fresh public user feeds are the primary path because direct x.com is
+    # intermittently blocked from GitHub/Azure. Authenticated paths remain
+    # available as independent fallbacks.
+    try:
+        return await fetch_source_rsshub(source)
+    except Exception as exc:
+        print(
+            f"{source['key']} RSS feed failed: {exc}; trying authenticated twscrape",
+            flush=True,
+        )
+
     if api is not None:
         try:
             return await fetch_source_twscrape(api, source)
@@ -207,14 +218,7 @@ async def fetch_source(api, source):
             flush=True,
         )
 
-    try:
-        return await fetch_source_browser(source)
-    except Exception as exc:
-        print(
-            f"{source['key']} Chromium failed: {exc}; trying verified RSSHub user feed",
-            flush=True,
-        )
-    return await fetch_source_rsshub(source)
+    return await fetch_source_browser(source)
 
 
 async def make_api_or_none():
@@ -228,7 +232,7 @@ async def make_api_or_none():
     except Exception as exc:
         print(
             f"Official X twscrape setup failed: {type(exc).__name__}: {exc}; "
-            "using Chromium/RSSHub recovery",
+            "using RSS/Chromium recovery",
             flush=True,
         )
         return None
@@ -242,40 +246,48 @@ async def main():
     total_sent = 0
     successful_sources = 0
 
-    for source in X_SOURCES:
-        try:
-            tweets = await fetch_source(api, source)
-            successful_sources += 1
-            fresh_recent = []
-            for tweet in tweets:
-                tweet_id = str(tweet.id)
-                item_id = f"{source['key']}:{tweet_id}"
-                if item_id in seen:
-                    continue
-                if snowflake_datetime(tweet_id) >= cutoff:
-                    fresh_recent.append(tweet)
-                else:
-                    seen.add(item_id)
+    # Fetch the three official accounts concurrently so one slow mirror cannot
+    # hold the whole official lane for tens of seconds.
+    results = await asyncio.gather(
+        *(fetch_source(api, source) for source in X_SOURCES),
+        return_exceptions=True,
+    )
 
-            for tweet in sorted(fresh_recent, key=lambda t: int(t.id)):
-                item_id = f"{source['key']}:{tweet.id}"
-                notify(source, tweet)
+    for source, result in zip(X_SOURCES, results):
+        if isinstance(result, Exception):
+            print(f"{source['key']} direct error: {result}", flush=True)
+            continue
+
+        tweets = result
+        successful_sources += 1
+        fresh_recent = []
+        for tweet in tweets:
+            tweet_id = str(tweet.id)
+            item_id = f"{source['key']}:{tweet_id}"
+            if item_id in seen:
+                continue
+            if snowflake_datetime(tweet_id) >= cutoff:
+                fresh_recent.append(tweet)
+            else:
                 seen.add(item_id)
-                total_sent += 1
-                print(
-                    "OFFICIAL X DIRECT SENT:",
-                    source["org"],
-                    f"https://x.com/{source['username']}/status/{tweet.id}",
-                    flush=True,
-                )
 
+        for tweet in sorted(fresh_recent, key=lambda t: int(t.id)):
+            item_id = f"{source['key']}:{tweet.id}"
+            notify(source, tweet)
+            seen.add(item_id)
+            total_sent += 1
             print(
-                f"{source['key']} direct: {len(tweets)} fetched, "
-                f"{len(fresh_recent)} recent unseen sent",
+                "OFFICIAL X DIRECT SENT:",
+                source["org"],
+                f"https://x.com/{source['username']}/status/{tweet.id}",
                 flush=True,
             )
-        except Exception as exc:
-            print(f"{source['key']} direct error: {exc}", flush=True)
+
+        print(
+            f"{source['key']} direct: {len(tweets)} fetched, "
+            f"{len(fresh_recent)} recent unseen sent",
+            flush=True,
+        )
 
     state["ids"] = sorted(seen)
     save_state(state)
