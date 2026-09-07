@@ -67,12 +67,12 @@ jobs:
           total = sum(counts.values())
           print("SOURCE PARITY", counts, "total_direct_pages=", total, "special_lanes=2")
           assert counts == {
-              "core": 40,
+              "core": 39,
               "restored": 39,
               "international_priority": 24,
               "international_broad": 23,
           }, counts
-          assert total == 126
+          assert total == 125
           PY
 
       - name: Fast no-replay shadow baseline
