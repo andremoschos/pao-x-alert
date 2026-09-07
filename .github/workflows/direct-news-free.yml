@@ -12,6 +12,7 @@ on:
       - "direct_news_free/runner.py"
       - "direct_news_free/production_runner.py"
       - "direct_news_free/live_runtime.py"
+      - "direct_news_free/live_runtime_v2.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
@@ -64,7 +65,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -95,9 +96,9 @@ jobs:
         working-directory: direct_news_free
         run: python bootstrap.py
 
-      - name: Run hardened Railway-free production watcher
+      - name: Run stable cross-path dedupe watcher
         working-directory: direct_news_free
-        run: python live_runtime.py
+        run: python live_runtime_v2.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
