@@ -1,147 +1,19 @@
-name: PAO Direct News Free
+name: PAO Direct News Free Retiring
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - "direct_news_free/watcher.py"
-      - "direct_news_free/source_extensions.py"
-      - "direct_news_free/recipient_vault.py"
-      - "direct_news_free/bootstrap.py"
-      - "direct_news_free/runner.py"
-      - "direct_news_free/production_runner.py"
-      - "direct_news_free/live_runtime.py"
-      - "direct_news_free/live_runtime_v2.py"
-      - "direct_news_free/live_runtime_v3.py"
-      - "direct_news_free/live_runtime_v4.py"
-      - "direct_news_free/live_runtime_v5.py"
-      - "direct_news_free/live_runtime_v6.py"
-      - "direct_news_free/telegram_preflight.py"
-      - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
-
-permissions:
-  contents: write
-  actions: write
 
 concurrency:
   group: pao-direct-news-free
   cancel-in-progress: true
 
 jobs:
-  direct-news:
+  stop-direct-news:
     runs-on: ubuntu-latest
-    timeout-minutes: 235
-    env:
-      PYTHONUNBUFFERED: "1"
-      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
-      TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
-      DIRECT_NEWS_GITHUB_TOKEN: ${{ github.token }}
-      DIRECT_NEWS_DELIVERY_ENABLED: "1"
-      DIRECT_NEWS_RUN_ID: ${{ github.run_id }}
-      DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
-      DIRECT_NEWS_NEWSPAO_SECONDS: "5"
-      DIRECT_NEWS_POLL_SECONDS: "12"
-      DIRECT_NEWS_INTL_PRIORITY_SECONDS: "30"
-      DIRECT_NEWS_INTL_BROAD_SECONDS: "60"
-      DIRECT_NEWS_PROTOTHEMA_SECONDS: "15"
-      DIRECT_NEWS_SPORTFM_SECONDS: "30"
-      DIRECT_NEWS_CONCURRENCY: "28"
-      DIRECT_NEWS_ORDER_BUFFER_SECONDS: "2"
-      DIRECT_NEWS_CHECKPOINT_SECONDS: "120"
-      DIRECT_NEWS_MAX_AGE_HOURS: "6"
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install direct-news dependencies
-        working-directory: direct_news_free
-        run: pip install -r requirements.txt
-
-      - name: Production parity and hardening tests
-        working-directory: direct_news_free
-        shell: bash
-        run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py live_runtime_v4.py live_runtime_v5.py live_runtime_v6.py telegram_preflight.py
-          python - <<'PY'
-          import source_extensions
-          import watcher
-          source_extensions.apply(watcher)
-          counts = {
-              "core": len(watcher.CORE_SOURCES),
-              "restored": len(watcher.RESTORED_SOURCES),
-              "international_priority": len(watcher.INTL_PRIORITY_SOURCES),
-              "international_broad": len(watcher.INTL_BROAD_SOURCES),
-          }
-          total = sum(counts.values())
-          print("SOURCE PARITY", counts, "total_direct_pages=", total, "special_lanes=2")
-          assert counts == {
-              "core": 40,
-              "restored": 39,
-              "international_priority": 24,
-              "international_broad": 23,
-          }, counts
-          assert total == 126
-          assert any(s.name == "Sportime" and "sportime.gr" in s.url for s in watcher.CORE_SOURCES)
-
-          import live_runtime_v4
-          live_runtime_v4._selftest()
-          print("ARTICLE-ONLY GUARD: OK")
-
-          import live_runtime_v5
-          live_runtime_v5._selftest()
-          print("GLOBAL TIMESTAMP-INDEPENDENT DEDUPE: OK")
-
-          import live_runtime_v6
-          live_runtime_v6._selftest()
-          print("MATCH/RESULT/FIXTURE PAGE GUARD: OK")
-          PY
-
-      - name: Telegram production preflight
-        working-directory: direct_news_free
-        run: python telegram_preflight.py
-
-      - name: No-replay baseline safety
-        working-directory: direct_news_free
-        run: python bootstrap.py
-
-      - name: Claim single Telegram sender lease
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          lease="$(printf '{\"run_id\":\"%s\",\"claimed_at\":\"%s\"}\n' "$GITHUB_RUN_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")"
-          encoded="$(printf '%s' "$lease" | base64 -w0)"
-          sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/direct_news_free/active_run.json?ref=main" --jq '.sha' 2>/dev/null || true)"
-          if [ -n "$sha" ]; then
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/direct_news_free/active_run.json" \
-              -f message="Claim direct-news sender lease for run $GITHUB_RUN_ID [skip ci]" \
-              -f content="$encoded" -f sha="$sha" -f branch="main" >/dev/null
-          else
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/direct_news_free/active_run.json" \
-              -f message="Create direct-news sender lease for run $GITHUB_RUN_ID [skip ci]" \
-              -f content="$encoded" -f branch="main" >/dev/null
-          fi
-          echo "Single-sender lease claimed by run $GITHUB_RUN_ID"
-
-      - name: Run content-only globally deduped direct watcher
-        working-directory: direct_news_free
-        run: python live_runtime_v6.py
-
-      - name: Hand off to fresh runner
-        if: ${{ success() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run direct-news-free.yml --repo "$GITHUB_REPOSITORY" --ref main || true
+      - name: Retired
+        run: echo "GitHub direct-news sender retired; Railway is the sole direct-news sender."
