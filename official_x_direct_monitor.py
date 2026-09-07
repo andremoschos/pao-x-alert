@@ -248,10 +248,35 @@ async def main():
 
     # Fetch the three official accounts concurrently so one slow mirror cannot
     # hold the whole official lane for tens of seconds.
-    results = await asyncio.gather(
+    results = list(await asyncio.gather(
         *(fetch_source(api, source) for source in X_SOURCES),
         return_exceptions=True,
-    )
+    ))
+
+    # A short second RSS attempt protects the official lane from brief public
+    # mirror/network hiccups without changing secrets, state or delivery logic.
+    # Retry only the sources that failed every primary/fallback route above.
+    failed_indexes = [
+        index for index, result in enumerate(results) if isinstance(result, Exception)
+    ]
+    if failed_indexes:
+        await asyncio.sleep(3)
+        retry_results = await asyncio.gather(
+            *(fetch_source_rsshub(X_SOURCES[index]) for index in failed_indexes),
+            return_exceptions=True,
+        )
+        for index, retry_result in zip(failed_indexes, retry_results):
+            if not isinstance(retry_result, Exception):
+                results[index] = retry_result
+                print(
+                    f"{X_SOURCES[index]['key']} recovered on RSS retry",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"{X_SOURCES[index]['key']} RSS retry failed: {retry_result}",
+                    flush=True,
+                )
 
     for source, result in zip(X_SOURCES, results):
         if isinstance(result, Exception):
