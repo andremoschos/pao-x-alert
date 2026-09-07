@@ -11,11 +11,10 @@ on:
       - "direct_news_free/bootstrap.py"
       - "direct_news_free/runner.py"
       - "direct_news_free/production_runner.py"
+      - "direct_news_free/live_runtime.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
-  schedule:
-    - cron: "13 */4 * * *"
 
 permissions:
   contents: write
@@ -36,6 +35,15 @@ jobs:
       TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
       DIRECT_NEWS_DELIVERY_ENABLED: "1"
       DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
+      DIRECT_NEWS_NEWSPAO_SECONDS: "5"
+      DIRECT_NEWS_POLL_SECONDS: "12"
+      DIRECT_NEWS_INTL_PRIORITY_SECONDS: "30"
+      DIRECT_NEWS_INTL_BROAD_SECONDS: "60"
+      DIRECT_NEWS_PROTOTHEMA_SECONDS: "15"
+      DIRECT_NEWS_SPORTFM_SECONDS: "30"
+      DIRECT_NEWS_CONCURRENCY: "28"
+      DIRECT_NEWS_ORDER_BUFFER_SECONDS: "2"
+      DIRECT_NEWS_CHECKPOINT_SECONDS: "120"
 
     steps:
       - name: Checkout
@@ -56,7 +64,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -87,9 +95,9 @@ jobs:
         working-directory: direct_news_free
         run: python bootstrap.py
 
-      - name: Run Railway-free production watcher
+      - name: Run hardened Railway-free production watcher
         working-directory: direct_news_free
-        run: python production_runner.py
+        run: python live_runtime.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
