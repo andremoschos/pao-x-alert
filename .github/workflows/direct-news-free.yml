@@ -85,7 +85,13 @@ jobs:
 
       - name: Read-only Telegram cutover preflight
         working-directory: direct_news_free
-        run: python telegram_preflight.py
+        shell: bash
+        run: |
+          if python telegram_preflight.py; then
+            echo "Telegram recipients verified; delivery still intentionally disabled during shadow migration."
+          else
+            echo "Telegram recipients are not ready; continuing safely in shadow mode with delivery disabled."
+          fi
 
       - name: Fast no-replay shadow baseline
         working-directory: direct_news_free
