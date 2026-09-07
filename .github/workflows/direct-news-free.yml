@@ -34,8 +34,7 @@ jobs:
       TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
       TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
-      # Railway remains authoritative until the final user-confirmed cutover.
-      DIRECT_NEWS_DELIVERY_ENABLED: "0"
+      DIRECT_NEWS_DELIVERY_ENABLED: "1"
       DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
 
     steps:
@@ -53,7 +52,7 @@ jobs:
         working-directory: direct_news_free
         run: pip install -r requirements.txt
 
-      - name: Preflight source parity and syntax
+      - name: Production source parity and syntax
         working-directory: direct_news_free
         shell: bash
         run: |
@@ -80,21 +79,15 @@ jobs:
           assert any(s.name == "Sportime" and "sportime.gr" in s.url for s in watcher.CORE_SOURCES)
           PY
 
-      - name: Read-only Telegram cutover preflight
+      - name: Telegram production preflight
         working-directory: direct_news_free
-        shell: bash
-        run: |
-          if python telegram_preflight.py; then
-            echo "Telegram recipients verified; delivery still intentionally disabled during shadow migration."
-          else
-            echo "Telegram recipients are not ready; continuing safely in shadow mode with delivery disabled."
-          fi
+        run: python telegram_preflight.py
 
-      - name: Fast no-replay shadow baseline
+      - name: No-replay baseline safety
         working-directory: direct_news_free
         run: python bootstrap.py
 
-      - name: Run Railway-free shadow watcher
+      - name: Run Railway-free production watcher
         working-directory: direct_news_free
         run: python production_runner.py
 
