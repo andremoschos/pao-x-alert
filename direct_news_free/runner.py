@@ -18,11 +18,17 @@ from urllib.parse import quote, urlparse
 
 import feedparser
 
+import source_extensions
 import watcher
 
 
+# Add Sportime and any future explicitly approved direct extensions before the
+# runner starts. The helper is idempotent, so retries/reloads cannot duplicate it.
+source_extensions.apply(watcher)
+
 _original_process_source = watcher.process_source
 _original_load_state = watcher.load_state
+_original_send_alert = watcher.send_alert
 FALLBACK_MAX_ITEMS = 80
 
 
@@ -67,6 +73,16 @@ async def discover_recipients_private(session, state):
     except Exception as exc:
         watcher.log.warning("Private Telegram recipient discovery failed: %s", exc)
     return None
+
+
+async def send_alert_compact(session, state, item, prefix=""):
+    """Keep direct-news alerts compact; preserve only special explicit prefixes."""
+    # Normal direct alerts no longer repeat "ΝΕΟ ΓΙΑ ΠΑΝΑΘΗΝΑΪΚΟ" on every item.
+    # Dedicated lanes such as the SPORT FM TV keyword alert may still pass their
+    # own meaningful prefix and that remains visible.
+    if "ΝΕΟ ΓΙΑ ΠΑΝΑΘΗΝΑΪΚΟ" in str(prefix or ""):
+        prefix = ""
+    return await _original_send_alert(session, state, item, prefix=prefix)
 
 
 def _domain(source):
@@ -183,6 +199,7 @@ async def process_source_with_fallback(session, state, source, health):
 
 watcher.load_state = load_state_without_private_recipients
 watcher.discover_recipients = discover_recipients_private
+watcher.send_alert = send_alert_compact
 watcher.process_source = process_source_with_fallback
 
 
