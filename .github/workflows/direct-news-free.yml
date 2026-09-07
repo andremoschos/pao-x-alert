@@ -13,6 +13,7 @@ on:
       - "direct_news_free/production_runner.py"
       - "direct_news_free/live_runtime.py"
       - "direct_news_free/live_runtime_v2.py"
+      - "direct_news_free/live_runtime_v3.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
@@ -35,6 +36,7 @@ jobs:
       TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
       TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
       DIRECT_NEWS_DELIVERY_ENABLED: "1"
+      DIRECT_NEWS_RUN_ID: ${{ github.run_id }}
       DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
       DIRECT_NEWS_NEWSPAO_SECONDS: "5"
       DIRECT_NEWS_POLL_SECONDS: "12"
@@ -45,6 +47,7 @@ jobs:
       DIRECT_NEWS_CONCURRENCY: "28"
       DIRECT_NEWS_ORDER_BUFFER_SECONDS: "2"
       DIRECT_NEWS_CHECKPOINT_SECONDS: "120"
+      DIRECT_NEWS_MAX_AGE_HOURS: "6"
 
     steps:
       - name: Checkout
@@ -65,7 +68,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -96,9 +99,29 @@ jobs:
         working-directory: direct_news_free
         run: python bootstrap.py
 
-      - name: Run stable cross-path dedupe watcher
+      - name: Claim single Telegram sender lease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          lease="$(printf '{\"run_id\":\"%s\",\"claimed_at\":\"%s\"}\n' "$GITHUB_RUN_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")"
+          encoded="$(printf '%s' "$lease" | base64 -w0)"
+          sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/direct_news_free/active_run.json?ref=main" --jq '.sha' 2>/dev/null || true)"
+          if [ -n "$sha" ]; then
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/direct_news_free/active_run.json" \
+              -f message="Claim direct-news sender lease for run $GITHUB_RUN_ID [skip ci]" \
+              -f content="$encoded" -f sha="$sha" -f branch="main" >/dev/null
+          else
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/direct_news_free/active_run.json" \
+              -f message="Create direct-news sender lease for run $GITHUB_RUN_ID [skip ci]" \
+              -f content="$encoded" -f branch="main" >/dev/null
+          fi
+          echo "Single-sender lease claimed by run $GITHUB_RUN_ID"
+
+      - name: Run final single-sender direct watcher
         working-directory: direct_news_free
-        run: python live_runtime_v2.py
+        run: python live_runtime_v3.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
