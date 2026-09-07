@@ -16,6 +16,7 @@ on:
       - "direct_news_free/live_runtime_v3.py"
       - "direct_news_free/live_runtime_v4.py"
       - "direct_news_free/live_runtime_v5.py"
+      - "direct_news_free/live_runtime_v6.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
@@ -71,7 +72,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py live_runtime_v4.py live_runtime_v5.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py live_runtime_v4.py live_runtime_v5.py live_runtime_v6.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -100,6 +101,10 @@ jobs:
           import live_runtime_v5
           live_runtime_v5._selftest()
           print("GLOBAL TIMESTAMP-INDEPENDENT DEDUPE: OK")
+
+          import live_runtime_v6
+          live_runtime_v6._selftest()
+          print("MATCH/RESULT/FIXTURE PAGE GUARD: OK")
           PY
 
       - name: Telegram production preflight
@@ -130,9 +135,9 @@ jobs:
           fi
           echo "Single-sender lease claimed by run $GITHUB_RUN_ID"
 
-      - name: Run globally deduped article-only direct watcher
+      - name: Run content-only globally deduped direct watcher
         working-directory: direct_news_free
-        run: python live_runtime_v5.py
+        run: python live_runtime_v6.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
