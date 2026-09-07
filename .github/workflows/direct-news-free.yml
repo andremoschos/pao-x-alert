@@ -9,6 +9,7 @@ on:
       - "direct_news_free/source_extensions.py"
       - "direct_news_free/bootstrap.py"
       - "direct_news_free/runner.py"
+      - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
   schedule:
@@ -28,7 +29,10 @@ jobs:
     timeout-minutes: 235
     env:
       PYTHONUNBUFFERED: "1"
-      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 }}
+      # Prefer the dedicated direct-news bot secret. During migration only,
+      # safely fall back to the already configured PAO Telegram bot secret so
+      # read-only preflight can tell us whether it is the same intended bot.
+      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
       TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
       # Safe migration phase: Railway keeps real delivery while this public
@@ -56,7 +60,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py bootstrap.py runner.py
+          python -m py_compile watcher.py source_extensions.py bootstrap.py runner.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -78,6 +82,10 @@ jobs:
           assert total == 126
           assert any(s.name == "Sportime" and "sportime.gr" in s.url for s in watcher.CORE_SOURCES)
           PY
+
+      - name: Read-only Telegram cutover preflight
+        working-directory: direct_news_free
+        run: python telegram_preflight.py
 
       - name: Fast no-replay shadow baseline
         working-directory: direct_news_free
