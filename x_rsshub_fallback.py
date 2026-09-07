@@ -84,6 +84,13 @@ def _status_match(value):
 
 
 def _parse_rss(content, limit=100):
+    # Some Nitter mirrors prepend BOM/whitespace before the XML declaration.
+    # ElementTree rejects that form, so normalize only the transport prefix;
+    # feed content, IDs, timestamps and dedupe semantics remain unchanged.
+    if isinstance(content, bytes):
+        content = content.lstrip(b"\xef\xbb\xbf \t\r\n")
+    else:
+        content = str(content or "").lstrip("\ufeff \t\r\n")
     root = ET.fromstring(content)
     found = {}
     for item in root.findall(".//item"):
