@@ -37,7 +37,6 @@ def complete_relevant(text):
     return (
         "παναθηναικ" in value
         or "panathinaik" in value
-        or "panathinaikos" in value
         or "paobc" in value
         or bool(re.search(r"\bπαο\b", value))
         or bool(re.search(r"\bpao\b", value))
@@ -46,11 +45,12 @@ def complete_relevant(text):
 
 def complete_body_hits(text):
     value = base._clean_evidence(text or "")
+    if not value:
+        return 0
     return (
-        value.count("παναθηναικ")
-        + value.count("panathinaik")
-        + value.count("panathinaikos")
-        + value.count("paobc")
+        len(re.findall(r"\bπαναθηναικ[α-ω]*\b", value))
+        + len(re.findall(r"\bpanathinaik[a-z]*\b", value))
+        + len(re.findall(r"\bpaobc\b", value))
         + len(re.findall(r"\bπαο\b", value))
         + len(re.findall(r"\bpao\b", value))
     )
