@@ -14,6 +14,7 @@ on:
       - "direct_news_free/live_runtime.py"
       - "direct_news_free/live_runtime_v2.py"
       - "direct_news_free/live_runtime_v3.py"
+      - "direct_news_free/live_runtime_v4.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
@@ -64,11 +65,11 @@ jobs:
         working-directory: direct_news_free
         run: pip install -r requirements.txt
 
-      - name: Production source parity and syntax
+      - name: Production source parity, syntax and article-only guard tests
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py live_runtime_v4.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -89,6 +90,10 @@ jobs:
           }, counts
           assert total == 126
           assert any(s.name == "Sportime" and "sportime.gr" in s.url for s in watcher.CORE_SOURCES)
+
+          import live_runtime_v4
+          live_runtime_v4._selftest()
+          print("ARTICLE-ONLY GUARD: OK")
           PY
 
       - name: Telegram production preflight
@@ -119,9 +124,9 @@ jobs:
           fi
           echo "Single-sender lease claimed by run $GITHUB_RUN_ID"
 
-      - name: Run final single-sender direct watcher
+      - name: Run article-only single-sender direct watcher
         working-directory: direct_news_free
-        run: python live_runtime_v3.py
+        run: python live_runtime_v4.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
