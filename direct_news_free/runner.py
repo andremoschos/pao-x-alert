@@ -133,15 +133,18 @@ async def _fallback_source(session, state, source, health):
         return
 
     items = _entries(body, source)
-    first = source.name not in state["initialized_sources"]
+    fallback_key = f"fallback::{source.name}"
+    first = fallback_key not in state["initialized_sources"]
     sent = 0
 
     for item in reversed(items):
         if watcher.is_seen(state, item.url):
             continue
 
-        # The site-scoped PAO query itself is the relevance gate. Keep the same
-        # freshness policy and never mark a failed production delivery as seen.
+        # Every fallback route owns an independent first-run baseline. A source
+        # that was previously healthy direct must never replay its existing
+        # Google News fallback inventory merely because the direct route later
+        # becomes blocked.
         if first or not watcher.DELIVERY_ENABLED:
             watcher.mark_seen(state, item)
             continue
@@ -160,7 +163,7 @@ async def _fallback_source(session, state, source, health):
         sent += 1
 
     if first:
-        state["initialized_sources"].append(source.name)
+        state["initialized_sources"].append(fallback_key)
     watcher.save_state(state)
 
     slot.update(
