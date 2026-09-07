@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "direct_news_free/watcher.py"
+      - "direct_news_free/source_extensions.py"
       - "direct_news_free/bootstrap.py"
       - "direct_news_free/runner.py"
       - "direct_news_free/requirements.txt"
@@ -55,9 +56,11 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py bootstrap.py runner.py
+          python -m py_compile watcher.py source_extensions.py bootstrap.py runner.py
           python - <<'PY'
+          import source_extensions
           import watcher
+          source_extensions.apply(watcher)
           counts = {
               "core": len(watcher.CORE_SOURCES),
               "restored": len(watcher.RESTORED_SOURCES),
@@ -67,12 +70,13 @@ jobs:
           total = sum(counts.values())
           print("SOURCE PARITY", counts, "total_direct_pages=", total, "special_lanes=2")
           assert counts == {
-              "core": 39,
+              "core": 40,
               "restored": 39,
               "international_priority": 24,
               "international_broad": 23,
           }, counts
-          assert total == 125
+          assert total == 126
+          assert any(s.name == "Sportime" and "sportime.gr" in s.url for s in watcher.CORE_SOURCES)
           PY
 
       - name: Fast no-replay shadow baseline
