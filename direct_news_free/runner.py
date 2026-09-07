@@ -21,6 +21,14 @@ import feedparser
 import watcher
 
 
+# Extra direct source requested before the Railway cutover. Keep it attached to
+# the active core list so it receives the same relevance, seen-state and fallback
+# handling as every other direct publisher.
+SPORTIME_SOURCE = watcher.Source("Sportime", "https://sportime.gr/")
+if not any(source.name == SPORTIME_SOURCE.name for source in watcher.CORE_SOURCES):
+    watcher.CORE_SOURCES.append(SPORTIME_SOURCE)
+
+
 _original_process_source = watcher.process_source
 _original_load_state = watcher.load_state
 FALLBACK_MAX_ITEMS = 80
