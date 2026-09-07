@@ -7,25 +7,15 @@ from xml.etree import ElementTree as ET
 
 import requests
 
-# Public RSSHub instances. Keep multiple independent no-auth mirrors so a
-# provider outage does not take down the X lane. The first entries below were
-# observed healthy in September 2026 and expose active Twitter routes.
+# Public RSSHub instances verified from GitHub-hosted runners on 2026-09-06.
+# They are read-only X feed mirrors; authenticated X remains as fallback in the
+# caller if the RSS route is unavailable.
 USER_HOSTS = [
-    "https://rsshub.yfi.moe",
-    "https://rsshub.mt.cd",
-    "https://rsshub.rssforever.com",
-    "https://rsshub.feeded.xyz",
-    "https://hub.slarker.me",
     "https://rsshub-container.folo.is",
     "https://rss.xxu.do",
     "https://rsshub.stsecurity.moe",
 ]
 KEYWORD_HOSTS = [
-    "https://rsshub.yfi.moe",
-    "https://rsshub.rssforever.com",
-    "https://rsshub.mt.cd",
-    "https://rsshub.feeded.xyz",
-    "https://hub.slarker.me",
     "https://rsshub-container.folo.is",
     "https://rsshub.stsecurity.moe",
     "https://rss.xxu.do",
@@ -98,7 +88,7 @@ def _parse_rss(content, limit=100):
 def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
     headers = {
-        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.3",
+        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.2",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
     }
     for host in hosts:
@@ -180,6 +170,7 @@ def fetch_many_keywords(queries, limit=100):
 
 
 def fetch_general(limit=100):
-    # The same complete query used by the authenticated scanner. Try it against
-    # independent mirrors before falling back to authenticated X/Chromium.
+    # The same complete query used by the authenticated scanner. The combined
+    # route was verified to return a fresh 40-post feed, so one request replaces
+    # several separate keyword/account calls.
     return fetch_keyword(GENERAL_QUERY, limit=limit)
