@@ -17,11 +17,16 @@ import feedparser
 import watcher
 
 
+# Sportime was requested immediately before cutover. Baseline it here too so a
+# fresh migration run cannot replay old Sportime articles when delivery is enabled.
+SPORTIME_SOURCE = watcher.Source("Sportime", "https://sportime.gr/")
+
 ALL_DIRECT = (
     watcher.CORE_SOURCES
     + watcher.RESTORED_SOURCES
     + watcher.INTL_PRIORITY_SOURCES
     + watcher.INTL_BROAD_SOURCES
+    + [SPORTIME_SOURCE]
 )
 
 
