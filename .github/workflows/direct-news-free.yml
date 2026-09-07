@@ -1,5 +1,6 @@
 name: PAO Direct News Free
 
+# Preflight recheck after dedicated Telegram token update.
 on:
   workflow_dispatch:
   push:
