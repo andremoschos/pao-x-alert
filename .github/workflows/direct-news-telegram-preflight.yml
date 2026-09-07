@@ -1,0 +1,29 @@
+name: Direct News Telegram Preflight
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/direct-news-telegram-preflight.yml"
+      - "direct_news_free/telegram_preflight.py"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 }}
+      TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
+      TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read-only Telegram verification
+        working-directory: direct_news_free
+        run: python telegram_preflight.py
