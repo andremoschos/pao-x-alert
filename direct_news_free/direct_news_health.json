@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-09-07T15:44:01.103561+00:00",
+  "checked_at": "2026-09-07T15:44:09.668148+00:00",
   "lanes": {
     "protothema_rss": {
       "http_status": 200,
@@ -18,9 +18,9 @@
       "status": "ok"
     }
   },
-  "last_cycle_finished_at": "2026-09-07T15:44:00.834777+00:00",
+  "last_cycle_finished_at": "2026-09-07T15:44:09.384672+00:00",
   "mode": "production",
-  "runner_alive_at": "2026-09-07T15:44:00.834929+00:00",
+  "runner_alive_at": "2026-09-07T15:44:09.400253+00:00",
   "runtime": "live_runtime_v1",
   "source_inventory": {
     "core": 40,
@@ -250,7 +250,7 @@
     },
     "Betarades Web": {
       "coverage": "direct",
-      "duration": 12.58,
+      "duration": 18.31,
       "effective_status": "ok",
       "fallback_deduped": 38,
       "fallback_filtered_irrelevant": 0,
@@ -262,9 +262,9 @@
       "fallback_sent": 0,
       "fallback_status": "ok",
       "http_status": 200,
-      "last_attempt": "2026-09-07T15:42:36.672070+00:00",
+      "last_attempt": "2026-09-07T15:44:07.090270+00:00",
       "last_error": null,
-      "last_ok": "2026-09-07T15:42:37.106881+00:00",
+      "last_ok": "2026-09-07T15:44:07.535050+00:00",
       "sent": 0,
       "status": "ok",
       "visible_items": 120
@@ -715,11 +715,11 @@
     },
     "L'Équipe Panathinaikos": {
       "coverage": "direct",
-      "duration": 2.93,
+      "duration": 14.14,
       "http_status": 200,
-      "last_attempt": "2026-09-07T15:42:41.079480+00:00",
+      "last_attempt": "2026-09-07T15:44:06.402590+00:00",
       "last_error": null,
-      "last_ok": "2026-09-07T15:42:41.279073+00:00",
+      "last_ok": "2026-09-07T15:44:06.543999+00:00",
       "sent": 0,
       "status": "ok",
       "visible_items": 120
@@ -779,11 +779,11 @@
     },
     "Menshouse": {
       "coverage": "direct",
-      "duration": 13.24,
+      "duration": 13.58,
       "http_status": 200,
-      "last_attempt": "2026-09-07T15:43:02.487553+00:00",
+      "last_attempt": "2026-09-07T15:44:08.151207+00:00",
       "last_error": null,
-      "last_ok": "2026-09-07T15:43:02.553324+00:00",
+      "last_ok": "2026-09-07T15:44:08.217698+00:00",
       "sent": 0,
       "status": "ok",
       "visible_items": 55
@@ -975,19 +975,19 @@
     },
     "NewsPao Flow": {
       "coverage": "fallback",
-      "duration": 17.16,
+      "duration": 12.45,
       "effective_status": "ok",
-      "fallback_deduped": 1120,
+      "fallback_deduped": 1200,
       "fallback_filtered_irrelevant": 0,
       "fallback_http_status": 200,
       "fallback_items": 80,
-      "fallback_last_attempt": "2026-09-07T15:43:03.117401+00:00",
+      "fallback_last_attempt": "2026-09-07T15:44:08.761495+00:00",
       "fallback_last_error": null,
-      "fallback_last_ok": "2026-09-07T15:43:03.595429+00:00",
+      "fallback_last_ok": "2026-09-07T15:44:09.092471+00:00",
       "fallback_sent": 0,
       "fallback_status": "ok",
       "http_status": 403,
-      "last_attempt": "2026-09-07T15:43:01.832547+00:00",
+      "last_attempt": "2026-09-07T15:44:07.087633+00:00",
       "last_error": "fetch failed HTTP 403",
       "status": "error"
     },
@@ -1107,8 +1107,8 @@
       "status": "error"
     },
     "OlaPrasina1908": {
-      "coverage": "fallback",
-      "duration": 16.15,
+      "coverage": "direct",
+      "duration": 13.23,
       "effective_status": "ok",
       "fallback_deduped": 40,
       "fallback_filtered_irrelevant": 0,
@@ -1119,12 +1119,12 @@
       "fallback_last_ok": "2026-09-07T15:43:03.117000+00:00",
       "fallback_sent": 0,
       "fallback_status": "ok",
-      "http_status": 0,
-      "last_attempt": "2026-09-07T15:43:01.839921+00:00",
-      "last_error": "fetch failed HTTP 0",
-      "last_ok": "2026-09-07T15:40:30.206459+00:00",
+      "http_status": 200,
+      "last_attempt": "2026-09-07T15:44:07.810971+00:00",
+      "last_error": null,
+      "last_ok": "2026-09-07T15:44:07.871744+00:00",
       "sent": 0,
-      "status": "error",
+      "status": "ok",
       "visible_items": 53
     },
     "Ole Argentina": {
@@ -1210,8 +1210,8 @@
       "status": "error"
     },
     "PAO FC Official": {
-      "coverage": "fallback",
-      "duration": 20.43,
+      "coverage": "direct",
+      "duration": 13.79,
       "effective_status": "ok",
       "fallback_deduped": 7,
       "fallback_filtered_irrelevant": 0,
@@ -1222,12 +1222,12 @@
       "fallback_last_ok": "2026-09-07T15:43:04.850566+00:00",
       "fallback_sent": 0,
       "fallback_status": "ok",
-      "http_status": 0,
-      "last_attempt": "2026-09-07T15:43:02.476675+00:00",
-      "last_error": "fetch failed HTTP 0",
-      "last_ok": "2026-09-07T15:40:55.210309+00:00",
+      "http_status": 200,
+      "last_attempt": "2026-09-07T15:44:09.092802+00:00",
+      "last_error": null,
+      "last_ok": "2026-09-07T15:44:09.117669+00:00",
       "sent": 1,
-      "status": "error",
+      "status": "ok",
       "visible_items": 57
     },
     "PAO Pantou": {
@@ -1366,14 +1366,24 @@
       "visible_items": 120
     },
     "Radar Agent Stories": {
-      "coverage": "direct",
-      "duration": 7.42,
-      "http_status": 200,
-      "last_attempt": "2026-09-07T15:42:47.269833+00:00",
-      "last_error": null,
+      "coverage": "fallback",
+      "duration": 16.12,
+      "effective_status": "ok",
+      "fallback_deduped": 0,
+      "fallback_filtered_irrelevant": 0,
+      "fallback_http_status": 200,
+      "fallback_items": 0,
+      "fallback_last_attempt": "2026-09-07T15:44:08.491622+00:00",
+      "fallback_last_error": null,
+      "fallback_last_ok": "2026-09-07T15:44:08.761139+00:00",
+      "fallback_sent": 0,
+      "fallback_status": "ok",
+      "http_status": 0,
+      "last_attempt": "2026-09-07T15:44:07.088817+00:00",
+      "last_error": "fetch failed HTTP 0",
       "last_ok": "2026-09-07T15:42:47.299945+00:00",
       "sent": 0,
-      "status": "ok",
+      "status": "error",
       "visible_items": 22
     },
     "Record Portugal": {
