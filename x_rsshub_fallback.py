@@ -7,9 +7,8 @@ from xml.etree import ElementTree as ET
 
 import requests
 
-# Public RSSHub instances verified from GitHub-hosted runners on 2026-09-06.
-# They are read-only X feed mirrors; authenticated X remains as fallback in the
-# caller if the RSS route is unavailable.
+# Public RSSHub instances. X routes on public mirrors can intermittently be
+# unavailable when the instance has no working Twitter auth token.
 USER_HOSTS = [
     "https://rsshub-container.folo.is",
     "https://rss.xxu.do",
@@ -20,6 +19,19 @@ KEYWORD_HOSTS = [
     "https://rsshub.stsecurity.moe",
     "https://rss.xxu.do",
 ]
+
+# Independent read-only recovery path. These mirrors expose standard RSS and
+# keep GitHub runners away from direct x.com browser access, which is currently
+# returning anti-bot 403 pages. Multiple hosts are used so one dead mirror does
+# not take the lane down.
+NITTER_HOSTS = [
+    "https://xcancel.com",
+    "https://nitter.poast.org",
+    "https://nitter.pek.li",
+    "https://nitter.aishiteiru.moe",
+    "https://nitter.aosus.link",
+]
+
 TIMEOUT = 12
 USER_MAX_AGE = timedelta(days=14)
 
@@ -52,23 +64,34 @@ def _item_text(item):
     return text or "(post without text)"
 
 
+def _status_match(value):
+    value = str(value or "")
+    match = re.search(
+        r"https?://(?:www\.)?(?:x\.com|twitter\.com)/([^/?#]+)/status/(\d+)",
+        value,
+        flags=re.I,
+    )
+    if match:
+        return match
+
+    # Nitter-style links keep the same /username/status/id path, but use a
+    # mirror hostname rather than x.com.
+    return re.search(
+        r"https?://[^/]+/([^/?#]+)/status/(\d+)",
+        value,
+        flags=re.I,
+    )
+
+
 def _parse_rss(content, limit=100):
     root = ET.fromstring(content)
     found = {}
     for item in root.findall(".//item"):
         link = (item.findtext("link") or item.findtext("guid") or "").strip()
-        match = re.search(
-            r"https?://(?:www\.)?(?:x\.com|twitter\.com)/([^/?#]+)/status/(\d+)",
-            link,
-            flags=re.I,
-        )
+        match = _status_match(link)
         if not match:
             raw = ET.tostring(item, encoding="unicode")
-            match = re.search(
-                r"https?://(?:www\.)?(?:x\.com|twitter\.com)/([^/?#]+)/status/(\d+)",
-                raw,
-                flags=re.I,
-            )
+            match = _status_match(raw)
         if not match:
             continue
         username, tid = match.group(1), match.group(2)
@@ -88,7 +111,7 @@ def _parse_rss(content, limit=100):
 def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
     headers = {
-        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.2",
+        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.3",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
     }
     for host in hosts:
@@ -110,7 +133,7 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
                     )
                     continue
             print(
-                f"X RSSHub {label}: {len(tweets)} posts via {host}; "
+                f"X RSS {label}: {len(tweets)} posts via {host}; "
                 f"latest={tweets[0]['created'].isoformat()}",
                 flush=True,
             )
@@ -118,29 +141,64 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
         except Exception as exc:
             errors.append(f"{host} {type(exc).__name__}: {exc}")
     raise RuntimeError(
-        f"RSSHub X feed failed for {label}: " + "; ".join(errors[-len(hosts):])
+        f"X RSS feed failed for {label}: " + "; ".join(errors[-len(hosts):])
     )
 
 
-def fetch_user(username, limit=40):
+def _fetch_nitter_user(username, limit=40):
     safe_username = quote(str(username).strip().lstrip("@"), safe="")
     return _fetch_path(
-        f"/twitter/user/{safe_username}/exclude_rts_replies",
-        USER_HOSTS,
-        f"user @{safe_username}",
+        f"/{safe_username}/rss",
+        NITTER_HOSTS,
+        f"Nitter user @{safe_username}",
         limit,
         max_age=USER_MAX_AGE,
     )
 
 
-def fetch_keyword(query, limit=40):
+def _fetch_nitter_keyword(query, limit=40):
     safe_query = quote(str(query).strip(), safe="")
     return _fetch_path(
-        f"/twitter/keyword/{safe_query}",
-        KEYWORD_HOSTS,
-        f"keyword {query!r}",
+        f"/search/rss?f=tweets&q={safe_query}",
+        NITTER_HOSTS,
+        f"Nitter keyword {query!r}",
         limit,
     )
+
+
+def fetch_user(username, limit=40):
+    safe_username = quote(str(username).strip().lstrip("@"), safe="")
+    try:
+        return _fetch_path(
+            f"/twitter/user/{safe_username}/exclude_rts_replies",
+            USER_HOSTS,
+            f"RSSHub user @{safe_username}",
+            limit,
+            max_age=USER_MAX_AGE,
+        )
+    except Exception as rsshub_exc:
+        print(
+            f"RSSHub user @{safe_username} failed: {rsshub_exc}; trying Nitter RSS",
+            flush=True,
+        )
+        return _fetch_nitter_user(safe_username, limit)
+
+
+def fetch_keyword(query, limit=40):
+    safe_query = quote(str(query).strip(), safe="")
+    try:
+        return _fetch_path(
+            f"/twitter/keyword/{safe_query}",
+            KEYWORD_HOSTS,
+            f"RSSHub keyword {query!r}",
+            limit,
+        )
+    except Exception as rsshub_exc:
+        print(
+            f"RSSHub keyword {query!r} failed: {rsshub_exc}; trying Nitter RSS search",
+            flush=True,
+        )
+        return _fetch_nitter_keyword(query, limit)
 
 
 def fetch_many_keywords(queries, limit=100):
@@ -165,12 +223,11 @@ def fetch_many_keywords(queries, limit=100):
 
     tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)[:limit]
     if not tweets:
-        raise RuntimeError("RSSHub keyword feed returned 0 posts: " + "; ".join(errors[-4:]))
+        raise RuntimeError("X RSS keyword feed returned 0 posts: " + "; ".join(errors[-4:]))
     return tweets
 
 
 def fetch_general(limit=100):
-    # The same complete query used by the authenticated scanner. The combined
-    # route was verified to return a fresh 40-post feed, so one request replaces
-    # several separate keyword/account calls.
+    # Use the complete production query first. If RSSHub cannot serve Twitter,
+    # fetch_keyword transparently moves to the independent Nitter RSS route.
     return fetch_keyword(GENERAL_QUERY, limit=limit)
