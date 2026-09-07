@@ -1,6 +1,5 @@
 name: PAO Direct News Free
 
-# Preflight recheck after dedicated Telegram token update.
 on:
   workflow_dispatch:
   push:
@@ -8,8 +7,10 @@ on:
     paths:
       - "direct_news_free/watcher.py"
       - "direct_news_free/source_extensions.py"
+      - "direct_news_free/recipient_vault.py"
       - "direct_news_free/bootstrap.py"
       - "direct_news_free/runner.py"
+      - "direct_news_free/production_runner.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
@@ -30,15 +31,10 @@ jobs:
     timeout-minutes: 235
     env:
       PYTHONUNBUFFERED: "1"
-      # Prefer the dedicated direct-news bot secret. During migration only,
-      # safely fall back to the already configured PAO Telegram bot secret so
-      # read-only preflight can tell us whether it is the same intended bot.
       TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
       TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
-      # Safe migration phase: Railway keeps real delivery while this public
-      # runner builds an identical no-replay baseline. We flip this only after
-      # Telegram credentials/recipients are verified here.
+      # Railway remains authoritative until the final user-confirmed cutover.
       DIRECT_NEWS_DELIVERY_ENABLED: "0"
       DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
 
@@ -61,7 +57,7 @@ jobs:
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py bootstrap.py runner.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -100,7 +96,7 @@ jobs:
 
       - name: Run Railway-free shadow watcher
         working-directory: direct_news_free
-        run: python runner.py
+        run: python production_runner.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
