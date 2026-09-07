@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-09-07T15:57:25.418318+00:00",
+  "checked_at": "2026-09-07T15:57:33.964579+00:00",
   "lanes": {
     "protothema_rss": {
       "http_status": 200,
@@ -18,9 +18,9 @@
       "status": "ok"
     }
   },
-  "last_cycle_finished_at": "2026-09-07T15:57:25.071357+00:00",
+  "last_cycle_finished_at": "2026-09-07T15:57:32.857061+00:00",
   "mode": "production",
-  "runner_alive_at": "2026-09-07T15:57:25.072141+00:00",
+  "runner_alive_at": "2026-09-07T15:57:33.694826+00:00",
   "runtime": "live_runtime_v1",
   "source_inventory": {
     "core": 40,
@@ -64,7 +64,7 @@
       "visible_items": 120
     },
     "AS Panathinaikos": {
-      "coverage": "fallback",
+      "coverage": "direct",
       "duration": 10.53,
       "effective_status": "ok",
       "fallback_deduped": 0,
@@ -273,7 +273,7 @@
     },
     "Contra": {
       "coverage": "fallback",
-      "duration": 16.06,
+      "duration": 12.25,
       "effective_status": "ok",
       "fallback_deduped": 0,
       "fallback_filtered_irrelevant": 0,
@@ -284,12 +284,12 @@
       "fallback_last_ok": "2026-09-07T15:56:08.235450+00:00",
       "fallback_sent": 0,
       "fallback_status": "ok",
-      "http_status": 0,
-      "last_attempt": "2026-09-07T15:56:05.946002+00:00",
-      "last_error": "fetch failed HTTP 0",
-      "last_ok": "2026-09-07T15:54:33.431625+00:00",
+      "http_status": 200,
+      "last_attempt": "2026-09-07T15:57:32.542732+00:00",
+      "last_error": null,
+      "last_ok": "2026-09-07T15:57:32.580903+00:00",
       "sent": 0,
-      "status": "error",
+      "status": "ok",
       "visible_items": 24
     },
     "DZFoot": {
@@ -511,11 +511,11 @@
     },
     "Gazzetta dello Sport": {
       "coverage": "direct",
-      "duration": 12.71,
+      "duration": 17.1,
       "http_status": 200,
-      "last_attempt": "2026-09-07T15:55:30.479066+00:00",
+      "last_attempt": "2026-09-07T15:57:30.003340+00:00",
       "last_error": null,
-      "last_ok": "2026-09-07T15:55:30.722702+00:00",
+      "last_ok": "2026-09-07T15:57:30.201192+00:00",
       "sent": 0,
       "status": "ok",
       "visible_items": 120
@@ -532,14 +532,24 @@
       "visible_items": 106
     },
     "Globo Esporte": {
-      "coverage": "direct",
-      "duration": 7.17,
-      "http_status": 200,
-      "last_attempt": "2026-09-07T15:55:47.456451+00:00",
-      "last_error": null,
+      "coverage": "fallback",
+      "duration": 22.1,
+      "effective_status": "ok",
+      "fallback_deduped": 0,
+      "fallback_filtered_irrelevant": 0,
+      "fallback_http_status": 200,
+      "fallback_items": 0,
+      "fallback_last_attempt": "2026-09-07T15:57:32.581940+00:00",
+      "fallback_last_error": null,
+      "fallback_last_ok": "2026-09-07T15:57:32.857013+00:00",
+      "fallback_sent": 0,
+      "fallback_status": "ok",
+      "http_status": 0,
+      "last_attempt": "2026-09-07T15:57:30.903581+00:00",
+      "last_error": "fetch failed HTTP 0",
       "last_ok": "2026-09-07T15:55:47.581932+00:00",
       "sent": 0,
-      "status": "ok",
+      "status": "error",
       "visible_items": 120
     },
     "Gol.hr": {
@@ -1297,7 +1307,7 @@
       "status": "error"
     },
     "SKAI Sports": {
-      "coverage": "fallback",
+      "coverage": "direct",
       "duration": 10.32,
       "effective_status": "ok",
       "fallback_deduped": 74,
@@ -1710,11 +1720,11 @@
     },
     "Tuttosport": {
       "coverage": "direct",
-      "duration": 2.49,
+      "duration": 12.63,
       "http_status": 200,
-      "last_attempt": "2026-09-07T15:56:06.783001+00:00",
+      "last_attempt": "2026-09-07T15:57:31.862662+00:00",
       "last_error": null,
-      "last_ok": "2026-09-07T15:56:06.800216+00:00",
+      "last_ok": "2026-09-07T15:57:31.880117+00:00",
       "sent": 0,
       "status": "ok",
       "visible_items": 15
