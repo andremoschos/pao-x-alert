@@ -14,8 +14,10 @@ import time
 import aiohttp
 import feedparser
 
+import source_extensions
 import watcher
 
+source_extensions.apply(watcher)
 
 ALL_DIRECT = (
     watcher.CORE_SOURCES
