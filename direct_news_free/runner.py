@@ -84,12 +84,29 @@ async def discover_recipients_private(session, state):
 
 async def send_alert_compact(session, state, item, prefix=""):
     """Keep direct-news alerts compact; preserve only special explicit prefixes."""
-    # Normal direct alerts no longer repeat "ΝΕΟ ΓΙΑ ΠΑΝΑΘΗΝΑΪΚΟ" on every item.
-    # Dedicated lanes such as the SPORT FM TV keyword alert may still pass their
-    # own meaningful prefix and that remains visible.
     if "ΝΕΟ ΓΙΑ ΠΑΝΑΘΗΝΑΪΚΟ" in str(prefix or ""):
         prefix = ""
     return await _original_send_alert(session, state, item, prefix=prefix)
+
+
+def strict_match_reason(source, item, body, body_ok):
+    """Reject incidental Panathinaikos mentions on broad/general publishers."""
+    if watcher.relevant(item.title):
+        return "title"
+    if watcher.relevant(item.url):
+        return "url"
+
+    # A genuine team-specific direct listing is trusted: its article can have a
+    # generic headline without spelling out Panathinaikos every time.
+    if source.team_specific and body_ok:
+        return "team-page"
+
+    # General pages must contain more than one article-body reference. This
+    # prevents an AEK/PAOK/Olympiacos story from being sent just because it makes
+    # one passing comparison/reference to Panathinaikos.
+    if body_ok and watcher.body_hits(body) >= 2:
+        return "body-strong"
+    return ""
 
 
 def _domain(source):
@@ -118,15 +135,32 @@ def _entries(body, source):
             or getattr(entry, "updated", "")
             or ""
         )
+        context = " ".join(
+            str(x or "")
+            for x in (
+                getattr(entry, "summary", ""),
+                getattr(entry, "description", ""),
+            )
+        )
         out.append(
             watcher.Item(
                 source=f"{source.name} · fallback",
                 url=url,
                 title=title,
                 published=published,
+                context=context,
             )
         )
     return out
+
+
+def _fallback_relevant(item):
+    """Fallback search results are untrusted until their own text is relevant."""
+    # Do NOT trust the fact that Google accepted the site-scoped query. Google
+    # News can return unrelated publisher items. Require explicit Panathinaikos
+    # evidence in the result title/description itself before Telegram delivery.
+    evidence = " ".join((item.title or "", item.context or ""))
+    return watcher.relevant(evidence)
 
 
 async def _fallback_source(session, state, source, health):
@@ -143,12 +177,8 @@ async def _fallback_source(session, state, source, health):
     fallback_key = f"fallback::{source.name}"
     sent = 0
     deduped = 0
+    filtered_irrelevant = 0
 
-    # Source groups run concurrently. Without this lock, two sibling URLs on the
-    # same publisher domain can both observe an unseen Google News item before
-    # either task marks it, producing duplicate Telegram alerts. Serialize only
-    # the fallback delivery/state mutation section; network feed fetching above
-    # remains concurrent.
     async with _fallback_state_lock:
         first = fallback_key not in state["initialized_sources"]
 
@@ -157,12 +187,17 @@ async def _fallback_source(session, state, source, health):
                 deduped += 1
                 continue
 
-            # Every fallback route owns an independent first-run baseline. A source
-            # that was previously healthy direct must never replay its existing
-            # Google News fallback inventory merely because the direct route later
-            # becomes blocked.
+            # Every fallback route owns an independent first-run baseline.
             if first or not watcher.DELIVERY_ENABLED:
                 watcher.mark_seen(state, item)
+                continue
+
+            # Hard relevance gate for EVERY fallback source. A team-specific
+            # route does not bypass this because the fallback query searches the
+            # whole publisher domain, not the original category URL.
+            if not _fallback_relevant(item):
+                watcher.mark_seen(state, item)
+                filtered_irrelevant += 1
                 continue
 
             if not watcher.is_recent(item.published, hours=24, unknown_ok=True):
@@ -189,6 +224,7 @@ async def _fallback_source(session, state, source, health):
             "fallback_items": len(items),
             "fallback_sent": int(slot.get("fallback_sent", 0) or 0) + sent,
             "fallback_deduped": int(slot.get("fallback_deduped", 0) or 0) + deduped,
+            "fallback_filtered_irrelevant": int(slot.get("fallback_filtered_irrelevant", 0) or 0) + filtered_irrelevant,
             "fallback_last_error": None,
         }
     )
@@ -210,7 +246,6 @@ async def process_source_with_fallback(session, state, source, health):
 
     if slot.get("fallback_status") == "ok":
         slot["coverage"] = "fallback"
-        # A blocked direct endpoint is still recorded, but coverage is healthy.
         slot["effective_status"] = "ok"
     else:
         slot["coverage"] = "unresolved"
@@ -220,6 +255,7 @@ async def process_source_with_fallback(session, state, source, health):
 watcher.load_state = load_state_without_private_recipients
 watcher.discover_recipients = discover_recipients_private
 watcher.send_alert = send_alert_compact
+watcher.match_reason = strict_match_reason
 watcher.process_source = process_source_with_fallback
 
 
