@@ -15,6 +15,7 @@ on:
       - "direct_news_free/live_runtime_v2.py"
       - "direct_news_free/live_runtime_v3.py"
       - "direct_news_free/live_runtime_v4.py"
+      - "direct_news_free/live_runtime_v5.py"
       - "direct_news_free/telegram_preflight.py"
       - "direct_news_free/requirements.txt"
       - ".github/workflows/direct-news-free.yml"
@@ -36,6 +37,7 @@ jobs:
       TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
       TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
+      DIRECT_NEWS_GITHUB_TOKEN: ${{ github.token }}
       DIRECT_NEWS_DELIVERY_ENABLED: "1"
       DIRECT_NEWS_RUN_ID: ${{ github.run_id }}
       DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
@@ -65,11 +67,11 @@ jobs:
         working-directory: direct_news_free
         run: pip install -r requirements.txt
 
-      - name: Production source parity, syntax and article-only guard tests
+      - name: Production parity and hardening tests
         working-directory: direct_news_free
         shell: bash
         run: |
-          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py live_runtime_v4.py telegram_preflight.py
+          python -m py_compile watcher.py source_extensions.py recipient_vault.py bootstrap.py runner.py production_runner.py live_runtime.py live_runtime_v2.py live_runtime_v3.py live_runtime_v4.py live_runtime_v5.py telegram_preflight.py
           python - <<'PY'
           import source_extensions
           import watcher
@@ -94,6 +96,10 @@ jobs:
           import live_runtime_v4
           live_runtime_v4._selftest()
           print("ARTICLE-ONLY GUARD: OK")
+
+          import live_runtime_v5
+          live_runtime_v5._selftest()
+          print("GLOBAL TIMESTAMP-INDEPENDENT DEDUPE: OK")
           PY
 
       - name: Telegram production preflight
@@ -124,9 +130,9 @@ jobs:
           fi
           echo "Single-sender lease claimed by run $GITHUB_RUN_ID"
 
-      - name: Run article-only single-sender direct watcher
+      - name: Run globally deduped article-only direct watcher
         working-directory: direct_news_free
-        run: python live_runtime_v4.py
+        run: python live_runtime_v5.py
 
       - name: Hand off to fresh runner
         if: ${{ success() }}
