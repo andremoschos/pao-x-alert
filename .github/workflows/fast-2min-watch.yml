@@ -9,6 +9,7 @@ on:
     paths:
       - ".github/workflows/fast-2min-watch.yml"
       - "fast_runner_v2.py"
+      - "fast_runner_v3.py"
       - "monitor.py"
       - "panathinaikos_monitor.py"
       - "x_rsshub_fallback.py"
@@ -80,6 +81,7 @@ jobs:
         run: |
           python -m py_compile \
             fast_runner_v2.py \
+            fast_runner_v3.py \
             monitor.py \
             panathinaikos_monitor.py \
             x_rsshub_fallback.py \
@@ -110,7 +112,7 @@ jobs:
 
       - name: Run resilient 2-minute PAO watchers
         shell: bash
-        run: python fast_runner_v2.py
+        run: python fast_runner_v3.py
 
       - name: Restore legacy safety if Fast exits with failure
         if: ${{ failure() }}
