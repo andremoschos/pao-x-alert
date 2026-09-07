@@ -31,6 +31,13 @@ _original_load_state = watcher.load_state
 _original_send_alert = watcher.send_alert
 FALLBACK_MAX_ITEMS = 80
 
+# Multiple source routes can share the same publisher domain (for example the
+# NewsPao home/flow/football/basket pages). Their Google News fallback query is
+# domain-scoped, so those routes can receive the exact same feed concurrently.
+# Keep the check -> send -> mark sequence atomic so the same fallback URL can
+# never be delivered by two sibling routes in the same cycle.
+_fallback_state_lock = asyncio.Lock()
+
 
 def load_state_without_private_recipients():
     state = _original_load_state()
@@ -134,37 +141,46 @@ async def _fallback_source(session, state, source, health):
 
     items = _entries(body, source)
     fallback_key = f"fallback::{source.name}"
-    first = fallback_key not in state["initialized_sources"]
     sent = 0
+    deduped = 0
 
-    for item in reversed(items):
-        if watcher.is_seen(state, item.url):
-            continue
+    # Source groups run concurrently. Without this lock, two sibling URLs on the
+    # same publisher domain can both observe an unseen Google News item before
+    # either task marks it, producing duplicate Telegram alerts. Serialize only
+    # the fallback delivery/state mutation section; network feed fetching above
+    # remains concurrent.
+    async with _fallback_state_lock:
+        first = fallback_key not in state["initialized_sources"]
 
-        # Every fallback route owns an independent first-run baseline. A source
-        # that was previously healthy direct must never replay its existing
-        # Google News fallback inventory merely because the direct route later
-        # becomes blocked.
-        if first or not watcher.DELIVERY_ENABLED:
+        for item in reversed(items):
+            if watcher.is_seen(state, item.url):
+                deduped += 1
+                continue
+
+            # Every fallback route owns an independent first-run baseline. A source
+            # that was previously healthy direct must never replay its existing
+            # Google News fallback inventory merely because the direct route later
+            # becomes blocked.
+            if first or not watcher.DELIVERY_ENABLED:
+                watcher.mark_seen(state, item)
+                continue
+
+            if not watcher.is_recent(item.published, hours=24, unknown_ok=True):
+                watcher.mark_seen(state, item)
+                continue
+
+            try:
+                await watcher.send_alert(session, state, item)
+            except Exception as exc:
+                slot["fallback_last_error"] = f"delivery: {type(exc).__name__}: {exc}"
+                continue
+
             watcher.mark_seen(state, item)
-            continue
+            sent += 1
 
-        if not watcher.is_recent(item.published, hours=24, unknown_ok=True):
-            watcher.mark_seen(state, item)
-            continue
-
-        try:
-            await watcher.send_alert(session, state, item)
-        except Exception as exc:
-            slot["fallback_last_error"] = f"delivery: {type(exc).__name__}: {exc}"
-            continue
-
-        watcher.mark_seen(state, item)
-        sent += 1
-
-    if first:
-        state["initialized_sources"].append(fallback_key)
-    watcher.save_state(state)
+        if first:
+            state["initialized_sources"].append(fallback_key)
+        watcher.save_state(state)
 
     slot.update(
         {
@@ -172,6 +188,7 @@ async def _fallback_source(session, state, source, health):
             "fallback_last_ok": watcher.now_iso(),
             "fallback_items": len(items),
             "fallback_sent": int(slot.get("fallback_sent", 0) or 0) + sent,
+            "fallback_deduped": int(slot.get("fallback_deduped", 0) or 0) + deduped,
             "fallback_last_error": None,
         }
     )
