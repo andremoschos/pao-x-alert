@@ -7,32 +7,23 @@ from xml.etree import ElementTree as ET
 
 import requests
 
-# Public RSSHub instances. X routes on public mirrors can intermittently be
-# unavailable when the instance has no working Twitter auth token.
+FX_BASE = "https://api.fxtwitter.com/2"
+FX_TIMEOUT = 15
+
 USER_HOSTS = [
-    "https://rsshub-container.folo.is",
     "https://rss.xxu.do",
     "https://rsshub.stsecurity.moe",
 ]
 KEYWORD_HOSTS = [
-    "https://rsshub-container.folo.is",
     "https://rsshub.stsecurity.moe",
     "https://rss.xxu.do",
 ]
 
-# Independent read-only recovery path. These mirrors expose standard RSS and
-# keep GitHub runners away from direct x.com browser access, which is currently
-# returning anti-bot 403 pages. Multiple hosts are used so one dead mirror does
-# not take the lane down.
-NITTER_HOSTS = [
-    "https://xcancel.com",
-    "https://nitter.poast.org",
-    "https://nitter.pek.li",
-    "https://nitter.aishiteiru.moe",
-    "https://nitter.aosus.link",
-]
+# Nitter is now only a last-resort safety net. Public instances are frequently
+# empty/rate-limited, so do not spend a long time cycling through dead mirrors.
+NITTER_HOSTS = ["https://xcancel.com"]
 
-TIMEOUT = 12
+TIMEOUT = 8
 USER_MAX_AGE = timedelta(days=14)
 
 GENERAL_QUERY = (
@@ -51,42 +42,139 @@ def _strip_html(value):
     text = html.unescape(str(value or ""))
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
     text = re.sub(r"<[^>]+>", " ", text)
-    text = html.unescape(text)
-    return " ".join(text.split()).strip()
+    return " ".join(html.unescape(text).split()).strip()
+
+
+def _extract_fx_media(status):
+    media = status.get("media") or {}
+    candidates = []
+    if isinstance(media, dict):
+        for key in ("all", "photos", "videos", "mosaic"):
+            value = media.get(key)
+            if isinstance(value, list):
+                candidates.extend(value)
+        if media.get("url"):
+            candidates.append(media)
+    elif isinstance(media, list):
+        candidates = media
+
+    out = []
+    seen = set()
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        url = item.get("url") or item.get("thumbnail_url")
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        kind = str(item.get("type") or "photo").lower()
+        if kind in ("video", "gif", "animated_gif"):
+            kind = "video"
+            variants = item.get("variants") or []
+            mp4 = []
+            for variant in variants if isinstance(variants, list) else []:
+                if not isinstance(variant, dict):
+                    continue
+                vurl = variant.get("url")
+                ctype = str(variant.get("content_type") or variant.get("contentType") or "")
+                if vurl and ("mp4" in ctype.lower() or vurl.split("?")[0].lower().endswith(".mp4")):
+                    mp4.append((int(variant.get("bitrate") or 0), vurl))
+            if mp4:
+                mp4.sort(reverse=True)
+                url = mp4[0][1]
+        else:
+            kind = "photo"
+        out.append({"type": kind, "url": str(url)})
+    return out[:10]
+
+
+def _fx_status_to_tweet(status):
+    tid = str(status.get("id") or "").strip()
+    if not tid.isdigit():
+        return None
+    author_obj = status.get("author") or {}
+    username = str(author_obj.get("screen_name") or author_obj.get("username") or "unknown").lstrip("@")
+    text = str(status.get("text") or "").strip() or "(post without text)"
+    url = str(status.get("url") or f"https://x.com/{username}/status/{tid}")
+    match = re.search(r"/([^/?#]+)/status/(\d+)", url)
+    if match:
+        username = match.group(1)
+    return {
+        "id": tid,
+        "author": f"@{username}",
+        "text": text,
+        "url": f"https://x.com/{username}/status/{tid}",
+        "created": snowflake_datetime(tid),
+        "media": _extract_fx_media(status),
+    }
+
+
+def _fetch_fx(path, params, label, limit):
+    response = requests.get(
+        FX_BASE + path,
+        params=params,
+        timeout=FX_TIMEOUT,
+        headers={"User-Agent": "PAO-Watcher/2.0", "Accept": "application/json"},
+    )
+    if response.status_code not in (200, 404):
+        raise RuntimeError(f"FxTwitter {label} HTTP {response.status_code}")
+    data = response.json()
+    results = data.get("results") or []
+    tweets = []
+    seen = set()
+    for status in results:
+        if not isinstance(status, dict) or status.get("type") == "tombstone":
+            continue
+        tweet = _fx_status_to_tweet(status)
+        if not tweet or tweet["id"] in seen:
+            continue
+        seen.add(tweet["id"])
+        tweets.append(tweet)
+        if len(tweets) >= limit:
+            break
+    tweets.sort(key=lambda item: int(item["id"]), reverse=True)
+    if not tweets:
+        raise RuntimeError(f"FxTwitter {label} returned 0 posts")
+    print(
+        f"X FX {label}: {len(tweets)} posts; latest={tweets[0]['created'].isoformat()}",
+        flush=True,
+    )
+    return tweets
+
+
+def _fetch_fx_user(username, limit=40):
+    username = str(username).strip().lstrip("@")
+    return _fetch_fx(
+        f"/profile/{quote(username, safe='')}/statuses",
+        {"count": min(max(int(limit), 1), 100)},
+        f"user @{username}",
+        limit,
+    )
+
+
+def _fetch_fx_keyword(query, limit=40):
+    return _fetch_fx(
+        "/search",
+        {"q": str(query), "feed": "latest", "count": min(max(int(limit), 1), 100)},
+        f"search {query!r}",
+        limit,
+    )
 
 
 def _item_text(item):
     title = item.findtext("title") or ""
     description = item.findtext("description") or ""
-    text = _strip_html(title)
-    if not text:
-        text = _strip_html(description)
-    return text or "(post without text)"
+    return _strip_html(title) or _strip_html(description) or "(post without text)"
 
 
 def _status_match(value):
     value = str(value or "")
-    match = re.search(
-        r"https?://(?:www\.)?(?:x\.com|twitter\.com)/([^/?#]+)/status/(\d+)",
-        value,
-        flags=re.I,
-    )
-    if match:
-        return match
-
-    # Nitter-style links keep the same /username/status/id path, but use a
-    # mirror hostname rather than x.com.
     return re.search(
-        r"https?://[^/]+/([^/?#]+)/status/(\d+)",
-        value,
-        flags=re.I,
+        r"https?://[^/]+/([^/?#]+)/status/(\d+)", value, flags=re.I
     )
 
 
 def _parse_rss(content, limit=100):
-    # Some Nitter mirrors prepend BOM/whitespace before the XML declaration.
-    # ElementTree rejects that form, so normalize only the transport prefix;
-    # feed content, IDs, timestamps and dedupe semantics remain unchanged.
     if isinstance(content, bytes):
         content = content.lstrip(b"\xef\xbb\xbf \t\r\n")
     else:
@@ -95,10 +183,7 @@ def _parse_rss(content, limit=100):
     found = {}
     for item in root.findall(".//item"):
         link = (item.findtext("link") or item.findtext("guid") or "").strip()
-        match = _status_match(link)
-        if not match:
-            raw = ET.tostring(item, encoding="unicode")
-            match = _status_match(raw)
+        match = _status_match(link) or _status_match(ET.tostring(item, encoding="unicode"))
         if not match:
             continue
         username, tid = match.group(1), match.group(2)
@@ -118,13 +203,12 @@ def _parse_rss(content, limit=100):
 def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
     headers = {
-        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.3",
-        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.4",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
     }
     for host in hosts:
-        url = host.rstrip("/") + path
         try:
-            response = requests.get(url, timeout=TIMEOUT, headers=headers)
+            response = requests.get(host.rstrip("/") + path, timeout=TIMEOUT, headers=headers)
             if response.status_code != 200:
                 errors.append(f"{host} HTTP {response.status_code}")
                 continue
@@ -132,94 +216,69 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
             if not tweets:
                 errors.append(f"{host} empty feed")
                 continue
-            if max_age is not None:
-                age = datetime.now(timezone.utc) - tweets[0]["created"]
-                if age > max_age:
-                    errors.append(
-                        f"{host} stale feed latest={tweets[0]['created'].isoformat()}"
-                    )
-                    continue
-            print(
-                f"X RSS {label}: {len(tweets)} posts via {host}; "
-                f"latest={tweets[0]['created'].isoformat()}",
-                flush=True,
-            )
+            if max_age is not None and datetime.now(timezone.utc) - tweets[0]["created"] > max_age:
+                errors.append(f"{host} stale feed latest={tweets[0]['created'].isoformat()}")
+                continue
+            print(f"X RSS {label}: {len(tweets)} posts via {host}", flush=True)
             return tweets
         except Exception as exc:
             errors.append(f"{host} {type(exc).__name__}: {exc}")
-    raise RuntimeError(
-        f"X RSS feed failed for {label}: " + "; ".join(errors[-len(hosts):])
-    )
+    raise RuntimeError(f"X RSS feed failed for {label}: " + "; ".join(errors))
 
 
-def _fetch_nitter_user(username, limit=40):
-    safe_username = quote(str(username).strip().lstrip("@"), safe="")
-    return _fetch_path(
-        f"/{safe_username}/rss",
-        NITTER_HOSTS,
-        f"Nitter user @{safe_username}",
-        limit,
-        max_age=USER_MAX_AGE,
-    )
+def _fetch_rss_user(username, limit=40):
+    safe = quote(str(username).strip().lstrip("@"), safe="")
+    try:
+        return _fetch_path(
+            f"/twitter/user/{safe}/exclude_rts_replies", USER_HOSTS,
+            f"RSSHub user @{safe}", limit, USER_MAX_AGE,
+        )
+    except Exception as rss_error:
+        print(f"RSSHub user @{safe} failed: {rss_error}; trying Nitter", flush=True)
+        return _fetch_path(f"/{safe}/rss", NITTER_HOSTS, f"Nitter user @{safe}", limit, USER_MAX_AGE)
 
 
-def _fetch_nitter_keyword(query, limit=40):
-    safe_query = quote(str(query).strip(), safe="")
-    return _fetch_path(
-        f"/search/rss?f=tweets&q={safe_query}",
-        NITTER_HOSTS,
-        f"Nitter keyword {query!r}",
-        limit,
-    )
+def _fetch_rss_keyword(query, limit=40):
+    safe = quote(str(query).strip(), safe="")
+    try:
+        return _fetch_path(
+            f"/twitter/keyword/{safe}", KEYWORD_HOSTS,
+            f"RSSHub keyword {query!r}", limit,
+        )
+    except Exception as rss_error:
+        print(f"RSSHub keyword {query!r} failed: {rss_error}; trying Nitter", flush=True)
+        return _fetch_path(
+            f"/search/rss?f=tweets&q={safe}", NITTER_HOSTS,
+            f"Nitter keyword {query!r}", limit,
+        )
 
 
 def fetch_user(username, limit=40):
-    safe_username = quote(str(username).strip().lstrip("@"), safe="")
     try:
-        return _fetch_path(
-            f"/twitter/user/{safe_username}/exclude_rts_replies",
-            USER_HOSTS,
-            f"RSSHub user @{safe_username}",
-            limit,
-            max_age=USER_MAX_AGE,
-        )
-    except Exception as rsshub_exc:
-        print(
-            f"RSSHub user @{safe_username} failed: {rsshub_exc}; trying Nitter RSS",
-            flush=True,
-        )
-        return _fetch_nitter_user(safe_username, limit)
+        return _fetch_fx_user(username, limit)
+    except Exception as fx_error:
+        print(f"FxTwitter user @{str(username).lstrip('@')} failed: {fx_error}; trying RSS", flush=True)
+        return _fetch_rss_user(username, limit)
 
 
 def fetch_keyword(query, limit=40):
-    safe_query = quote(str(query).strip(), safe="")
     try:
-        return _fetch_path(
-            f"/twitter/keyword/{safe_query}",
-            KEYWORD_HOSTS,
-            f"RSSHub keyword {query!r}",
-            limit,
-        )
-    except Exception as rsshub_exc:
-        print(
-            f"RSSHub keyword {query!r} failed: {rsshub_exc}; trying Nitter RSS search",
-            flush=True,
-        )
-        return _fetch_nitter_keyword(query, limit)
+        return _fetch_fx_keyword(query, limit)
+    except Exception as fx_error:
+        print(f"FxTwitter search {query!r} failed: {fx_error}; trying RSS", flush=True)
+        return _fetch_rss_keyword(query, limit)
 
 
 def fetch_many_keywords(queries, limit=100):
-    unique_queries = []
+    unique = []
     for query in queries:
         query = str(query or "").strip()
-        if query and query not in unique_queries:
-            unique_queries.append(query)
-
+        if query and query not in unique:
+            unique.append(query)
     found = {}
     errors = []
-    workers = min(4, max(1, len(unique_queries)))
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(fetch_keyword, query, min(limit, 40)): query for query in unique_queries}
+    with ThreadPoolExecutor(max_workers=min(4, max(1, len(unique)))) as pool:
+        futures = {pool.submit(fetch_keyword, q, min(limit, 40)): q for q in unique}
         for future in as_completed(futures):
             query = futures[future]
             try:
@@ -227,14 +286,11 @@ def fetch_many_keywords(queries, limit=100):
                     found[tweet["id"]] = tweet
             except Exception as exc:
                 errors.append(f"{query!r}: {exc}")
-
     tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)[:limit]
     if not tweets:
-        raise RuntimeError("X RSS keyword feed returned 0 posts: " + "; ".join(errors[-4:]))
+        raise RuntimeError("X feed returned 0 posts: " + "; ".join(errors[-4:]))
     return tweets
 
 
 def fetch_general(limit=100):
-    # Use the complete production query first. If RSSHub cannot serve Twitter,
-    # fetch_keyword transparently moves to the independent Nitter RSS route.
     return fetch_keyword(GENERAL_QUERY, limit=limit)
