@@ -2,6 +2,8 @@ import html
 import json
 import os
 import re
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from urllib.parse import quote
@@ -84,12 +86,20 @@ PAO_TIMELINE_ACCOUNTS = [
     "papanikolaouchs",
 ]
 
-GENERAL_QUERY = (
-    'Panathinaikos OR #Panathinaikos OR '
+# Search the two user-visible X "Latest" queries independently. A single large
+# OR query can crowd one variant out of the first page and silently miss posts.
+GENERAL_LATEST_QUERIES = [
+    "Panathinaikos",
+    "#Panathinaikos",
     '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
-    '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
-    "from:paobc OR from:fmeetsdata"
-)
+    '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο"',
+]
+
+# General and Only-PAO run in the same fast process. Reuse identical Latest
+# results briefly so both lanes get full coverage without doubling X requests.
+_KEYWORD_CACHE_TTL_SECONDS = 90
+_KEYWORD_CACHE = {}
+_KEYWORD_CACHE_LOCK = threading.Lock()
 
 
 def snowflake_datetime(tweet_id):
@@ -494,18 +504,53 @@ def fetch_user(username, limit=40):
         return _fetch_rss_user(username, limit)
 
 
+def _keyword_cache_key(query, limit):
+    return (str(query or "").strip(), min(max(int(limit), 1), 40))
+
+
+def _keyword_cache_get(query, limit):
+    key = _keyword_cache_key(query, limit)
+    now = time.monotonic()
+    with _KEYWORD_CACHE_LOCK:
+        entry = _KEYWORD_CACHE.get(key)
+        if not entry:
+            return None
+        stored_at, tweets = entry
+        if now - stored_at > _KEYWORD_CACHE_TTL_SECONDS:
+            _KEYWORD_CACHE.pop(key, None)
+            return None
+        return [dict(item) for item in tweets]
+
+
+def _keyword_cache_put(query, limit, tweets):
+    key = _keyword_cache_key(query, limit)
+    with _KEYWORD_CACHE_LOCK:
+        _KEYWORD_CACHE[key] = (time.monotonic(), [dict(item) for item in tweets])
+
+
 def fetch_keyword(query, limit=40):
     # PRIMARY: true authenticated X Latest search across ALL accounts.
+    cached = _keyword_cache_get(query, limit)
+    if cached:
+        print(f"X Latest cache hit {query!r}: {len(cached)} posts", flush=True)
+        return cached
+
     try:
-        return _fetch_x_authenticated_keyword(query, limit)
+        tweets = _fetch_x_authenticated_keyword(query, limit)
+        _keyword_cache_put(query, limit, tweets)
+        return tweets
     except Exception as auth_error:
         print(f"X authenticated Latest search {query!r} failed: {auth_error}; trying public recovery", flush=True)
 
     try:
-        return _fetch_fx_keyword(query, limit)
+        tweets = _fetch_fx_keyword(query, limit)
+        _keyword_cache_put(query, limit, tweets)
+        return tweets
     except Exception as fx_error:
         print(f"X public search {query!r} failed: {fx_error}; trying RSS", flush=True)
-        return _fetch_rss_keyword(query, limit)
+        tweets = _fetch_rss_keyword(query, limit)
+        _keyword_cache_put(query, limit, tweets)
+        return tweets
 
 
 def fetch_many_keywords(queries, limit=100):
@@ -544,11 +589,12 @@ def fetch_many_keywords(queries, limit=100):
 
 
 def fetch_general(limit=100):
-    try:
-        return _fetch_x_authenticated_keyword(GENERAL_QUERY, limit)
-    except Exception as exc:
-        print(
-            f"X GLOBAL LATEST general search failed: {exc}; using curated PAO timelines recovery",
-            flush=True,
-        )
-        return fetch_users(PAO_TIMELINE_ACCOUNTS, limit)
+    # True X "Latest" semantics: query the visible Panathinaikos terms separately
+    # and merge by tweet id. Curated accounts are only the final recovery path.
+    tweets = fetch_many_keywords(GENERAL_LATEST_QUERIES, limit)
+    authors = {item["author"].lstrip("@").lower() for item in tweets}
+    print(
+        f"X GLOBAL LATEST general aggregation: {len(tweets)} posts from {len(authors)} authors",
+        flush=True,
+    )
+    return tweets
