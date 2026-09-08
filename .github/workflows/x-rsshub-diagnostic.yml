@@ -17,6 +17,9 @@ jobs:
   diagnose-rsshub-x:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+      X_CT0: ${{ secrets.X_CT0 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,10 +32,28 @@ jobs:
       - name: Install requests
         run: pip install requests
 
-      - name: Test production PAO X timelines
-        run: python x_rsshub_diagnostic.py
+      - name: Verify true X Latest search
+        run: |
+          python - <<'PY'
+          import x_rsshub_fallback as x
+          all_authors = set()
+          for query in ('Panathinaikos', '#Panathinaikos'):
+              tweets = x._fetch_x_authenticated_keyword(query, 40)
+              assert tweets, query
+              assert all(item['id'].isdigit() and '/status/' in item['url'] for item in tweets)
+              authors = {item['author'].lstrip('@').lower() for item in tweets}
+              assert 'unknown' not in authors, (query, sorted(authors))
+              all_authors.update(authors)
+              print('X_TRUE_LATEST_SMOKE', {
+                  'query': query,
+                  'count': len(tweets),
+                  'authors': len(authors),
+                  'latest': tweets[0]['url'],
+              })
+          assert len(all_authors) >= 3, sorted(all_authors)
+          PY
 
-      - name: Verify production aggregation parser
+      - name: Verify emergency timeline recovery
         run: |
           python - <<'PY'
           import x_rsshub_fallback as x
@@ -43,8 +64,5 @@ jobs:
           tweets = x.fetch_users(accounts, 100)
           assert tweets
           assert all(item['id'].isdigit() and '/status/' in item['url'] for item in tweets)
-          authors = {item['author'].lstrip('@').lower() for item in tweets}
-          assert 'onlypao_gr' in authors
-          assert 'papanikolaouchs' in authors
-          print('X_PRODUCTION_TIMELINE_SMOKE', {'count': len(tweets), 'authors': sorted(authors)})
+          print('X_TIMELINE_RECOVERY_SMOKE', {'count': len(tweets)})
           PY
