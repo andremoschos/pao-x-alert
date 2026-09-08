@@ -8,6 +8,7 @@ from xml.etree import ElementTree as ET
 import requests
 
 FX_BASE = "https://api.fxtwitter.com/2"
+FX_SEARCH_PROXY = "https://twitter.2-38.com/api/fx/2"
 FX_TIMEOUT = 15
 
 USER_HOSTS = [
@@ -18,9 +19,6 @@ KEYWORD_HOSTS = [
     "https://rsshub.stsecurity.moe",
     "https://rss.xxu.do",
 ]
-
-# Nitter is now only a last-resort safety net. Public instances are frequently
-# empty/rate-limited, so do not spend a long time cycling through dead mirrors.
 NITTER_HOSTS = ["https://xcancel.com"]
 
 TIMEOUT = 8
@@ -64,9 +62,8 @@ def _extract_fx_media(status):
         if not isinstance(item, dict):
             continue
         url = item.get("url") or item.get("thumbnail_url")
-        if not url or url in seen:
+        if not url:
             continue
-        seen.add(url)
         kind = str(item.get("type") or "photo").lower()
         if kind in ("video", "gif", "animated_gif"):
             kind = "video"
@@ -84,6 +81,9 @@ def _extract_fx_media(status):
                 url = mp4[0][1]
         else:
             kind = "photo"
+        if url in seen:
+            continue
+        seen.add(url)
         out.append({"type": kind, "url": str(url)})
     return out[:10]
 
@@ -95,8 +95,8 @@ def _fx_status_to_tweet(status):
     author_obj = status.get("author") or {}
     username = str(author_obj.get("screen_name") or author_obj.get("username") or "unknown").lstrip("@")
     text = str(status.get("text") or "").strip() or "(post without text)"
-    url = str(status.get("url") or f"https://x.com/{username}/status/{tid}")
-    match = re.search(r"/([^/?#]+)/status/(\d+)", url)
+    source_url = str(status.get("url") or "")
+    match = re.search(r"/([^/?#]+)/status/(\d+)", source_url)
     if match:
         username = match.group(1)
     return {
@@ -109,17 +109,17 @@ def _fx_status_to_tweet(status):
     }
 
 
-def _fetch_fx(path, params, label, limit):
+def _fetch_fx_from(base, path, params, label, limit):
     response = requests.get(
-        FX_BASE + path,
+        base.rstrip("/") + path,
         params=params,
         timeout=FX_TIMEOUT,
-        headers={"User-Agent": "PAO-Watcher/2.0", "Accept": "application/json"},
+        headers={"User-Agent": "PAO-Watcher/2.1", "Accept": "application/json"},
     )
     if response.status_code not in (200, 404):
-        raise RuntimeError(f"FxTwitter {label} HTTP {response.status_code}")
+        raise RuntimeError(f"{label} HTTP {response.status_code}")
     data = response.json()
-    results = data.get("results") or []
+    results = data.get("results") or [] if isinstance(data, dict) else []
     tweets = []
     seen = set()
     for status in results:
@@ -134,31 +134,35 @@ def _fetch_fx(path, params, label, limit):
             break
     tweets.sort(key=lambda item: int(item["id"]), reverse=True)
     if not tweets:
-        raise RuntimeError(f"FxTwitter {label} returned 0 posts")
-    print(
-        f"X FX {label}: {len(tweets)} posts; latest={tweets[0]['created'].isoformat()}",
-        flush=True,
-    )
+        message = str(data.get("message") or "")[:120] if isinstance(data, dict) else ""
+        raise RuntimeError(f"{label} returned 0 posts {message}".strip())
+    print(f"X API {label}: {len(tweets)} posts; latest={tweets[0]['created'].isoformat()}", flush=True)
     return tweets
 
 
 def _fetch_fx_user(username, limit=40):
     username = str(username).strip().lstrip("@")
-    return _fetch_fx(
+    return _fetch_fx_from(
+        FX_BASE,
         f"/profile/{quote(username, safe='')}/statuses",
         {"count": min(max(int(limit), 1), 100)},
-        f"user @{username}",
+        f"FxTwitter user @{username}",
         limit,
     )
 
 
 def _fetch_fx_keyword(query, limit=40):
-    return _fetch_fx(
-        "/search",
-        {"q": str(query), "feed": "latest", "count": min(max(int(limit), 1), 100)},
-        f"search {query!r}",
-        limit,
-    )
+    params = {"q": str(query), "feed": "latest", "count": min(max(int(limit), 1), 100)}
+    errors = []
+    for base, label in (
+        (FX_BASE, "FxTwitter search"),
+        (FX_SEARCH_PROXY, "X search proxy"),
+    ):
+        try:
+            return _fetch_fx_from(base, "/search", params, f"{label} {query!r}", limit)
+        except Exception as exc:
+            errors.append(f"{label}: {exc}")
+    raise RuntimeError("; ".join(errors))
 
 
 def _item_text(item):
@@ -168,10 +172,7 @@ def _item_text(item):
 
 
 def _status_match(value):
-    value = str(value or "")
-    return re.search(
-        r"https?://[^/]+/([^/?#]+)/status/(\d+)", value, flags=re.I
-    )
+    return re.search(r"https?://[^/]+/([^/?#]+)/status/(\d+)", str(value or ""), flags=re.I)
 
 
 def _parse_rss(content, limit=100):
@@ -202,10 +203,7 @@ def _parse_rss(content, limit=100):
 
 def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
-    headers = {
-        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.4",
-        "Accept": "application/rss+xml, application/xml, text/xml, */*",
-    }
+    headers = {"User-Agent": "PAO-Watcher-X-RSS-Fallback/1.5", "Accept": "application/rss+xml, application/xml, text/xml, */*"}
     for host in hosts:
         try:
             response = requests.get(host.rstrip("/") + path, timeout=TIMEOUT, headers=headers)
@@ -229,10 +227,7 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
 def _fetch_rss_user(username, limit=40):
     safe = quote(str(username).strip().lstrip("@"), safe="")
     try:
-        return _fetch_path(
-            f"/twitter/user/{safe}/exclude_rts_replies", USER_HOSTS,
-            f"RSSHub user @{safe}", limit, USER_MAX_AGE,
-        )
+        return _fetch_path(f"/twitter/user/{safe}/exclude_rts_replies", USER_HOSTS, f"RSSHub user @{safe}", limit, USER_MAX_AGE)
     except Exception as rss_error:
         print(f"RSSHub user @{safe} failed: {rss_error}; trying Nitter", flush=True)
         return _fetch_path(f"/{safe}/rss", NITTER_HOSTS, f"Nitter user @{safe}", limit, USER_MAX_AGE)
@@ -241,16 +236,10 @@ def _fetch_rss_user(username, limit=40):
 def _fetch_rss_keyword(query, limit=40):
     safe = quote(str(query).strip(), safe="")
     try:
-        return _fetch_path(
-            f"/twitter/keyword/{safe}", KEYWORD_HOSTS,
-            f"RSSHub keyword {query!r}", limit,
-        )
+        return _fetch_path(f"/twitter/keyword/{safe}", KEYWORD_HOSTS, f"RSSHub keyword {query!r}", limit)
     except Exception as rss_error:
         print(f"RSSHub keyword {query!r} failed: {rss_error}; trying Nitter", flush=True)
-        return _fetch_path(
-            f"/search/rss?f=tweets&q={safe}", NITTER_HOSTS,
-            f"Nitter keyword {query!r}", limit,
-        )
+        return _fetch_path(f"/search/rss?f=tweets&q={safe}", NITTER_HOSTS, f"Nitter keyword {query!r}", limit)
 
 
 def fetch_user(username, limit=40):
@@ -265,7 +254,7 @@ def fetch_keyword(query, limit=40):
     try:
         return _fetch_fx_keyword(query, limit)
     except Exception as fx_error:
-        print(f"FxTwitter search {query!r} failed: {fx_error}; trying RSS", flush=True)
+        print(f"X API search {query!r} failed: {fx_error}; trying RSS", flush=True)
         return _fetch_rss_keyword(query, limit)
 
 
