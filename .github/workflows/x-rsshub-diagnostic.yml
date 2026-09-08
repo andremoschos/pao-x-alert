@@ -29,16 +29,22 @@ jobs:
       - name: Install requests
         run: pip install requests
 
-      - name: Test RSSHub X feeds
+      - name: Test production PAO X timelines
         run: python x_rsshub_diagnostic.py
 
-      - name: Verify production fallback parser
+      - name: Verify production aggregation parser
         run: |
           python - <<'PY'
           import x_rsshub_fallback as x
-          official = x.fetch_user('paofc_', 10)
-          keyword = x.fetch_keyword('Panathinaikos', 10)
-          assert official and keyword
-          assert all(item['id'].isdigit() and '/status/' in item['url'] for item in official + keyword)
-          print('RSSHUB_PRODUCTION_SMOKE', {'official': len(official), 'keyword': len(keyword), 'official_latest': official[0]['url'], 'keyword_latest': keyword[0]['url']})
+          accounts = [
+              'paofc_', 'Paobcgr', 'acpanathinaikos', 'paobc',
+              'fmeetsdata', 'Onlypao_gr', 'papanikolaouchs'
+          ]
+          tweets = x.fetch_users(accounts, 100)
+          assert tweets
+          assert all(item['id'].isdigit() and '/status/' in item['url'] for item in tweets)
+          authors = {item['author'].lstrip('@').lower() for item in tweets}
+          assert 'onlypao_gr' in authors
+          assert 'papanikolaouchs' in authors
+          print('X_PRODUCTION_TIMELINE_SMOKE', {'count': len(tweets), 'authors': sorted(authors)})
           PY
