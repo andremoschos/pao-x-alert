@@ -18,12 +18,10 @@ permissions:
 jobs:
   diagnose-rsshub-x:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     env:
       X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
       X_CT0: ${{ secrets.X_CT0 }}
-      TWS_HTTP_BACKEND: curl
-      TWS_TELEMETRY: '0'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,49 +31,50 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install X search dependencies
-        run: pip install requests "twscrape[curl] @ git+https://github.com/vladkens/twscrape.git@main"
+      - name: Install requests
+        run: pip install requests
 
-      - name: Verify authenticated global X Latest search
+      - name: Verify true authenticated X Latest searches
         run: |
           python - <<'PY'
-          import asyncio
-          import os
-          from pathlib import Path
-          from twscrape import API, gather
+          import x_rsshub_fallback as x
 
-          async def main():
-              auth = os.environ.get('X_AUTH_TOKEN', '').strip()
-              ct0 = os.environ.get('X_CT0', '').strip()
-              assert auth and ct0, 'X cookies missing'
-              db = '/tmp/twscrape_global_latest_diag.db'
-              Path(db).unlink(missing_ok=True)
-              api = API(db, raise_when_no_account=True, wait_timeout=20, wait_interval=1)
-              await api.pool.add_account_cookies('newspao_diag', f'auth_token={auth}; ct0={ct0}')
+          combined = {}
+          for query in ('Panathinaikos', '#Panathinaikos'):
+              tweets = x._fetch_x_authenticated_keyword(query, 40)
+              assert tweets, f'{query}: 0 posts'
+              authors = {item['author'].lstrip('@').lower() for item in tweets}
+              assert len(authors) >= 3, f'{query}: global Latest coverage too narrow: {sorted(authors)}'
+              assert all(item['id'].isdigit() and '/status/' in item['url'] for item in tweets)
+              for item in tweets:
+                  combined[item['id']] = item
+              print('X_AUTH_LATEST_SMOKE', {
+                  'query': query,
+                  'count': len(tweets),
+                  'authors': len(authors),
+                  'latest': tweets[0]['url'],
+              }, flush=True)
 
-              all_authors = set()
-              for query in ('Panathinaikos', '#Panathinaikos'):
-                  results = await gather(api.search(query, limit=40))
-                  assert results, f'{query}: 0 results'
-                  authors = {
-                      (getattr(getattr(t, 'user', None), 'username', '') or 'unknown').lower()
-                      for t in results
-                  }
-                  ids = [str(t.id) for t in results]
-                  assert all(x.isdigit() for x in ids)
-                  all_authors.update(authors)
-                  print('X_TWSCRAPE_LATEST_SMOKE', {
-                      'query': query,
-                      'count': len(results),
-                      'authors': len(authors),
-                      'sample_authors': sorted(authors)[:12],
-                      'latest_id': max(ids, key=int),
-                  }, flush=True)
+          assert combined
+          print('X_AUTH_GLOBAL_LATEST_OK', {
+              'unique_posts': len(combined),
+              'unique_authors': len({item['author'].lower() for item in combined.values()}),
+          }, flush=True)
+          PY
 
-              assert len(all_authors) >= 3, f'global search too narrow: {sorted(all_authors)}'
-              print('X_TWSCRAPE_GLOBAL_LATEST_OK', {'authors': len(all_authors)}, flush=True)
-
-          asyncio.run(main())
+      - name: Verify production latest aggregation
+        run: |
+          python - <<'PY'
+          import x_rsshub_fallback as x
+          tweets = x.fetch_many_keywords(['Panathinaikos', '#Panathinaikos'], 120)
+          assert tweets
+          authors = {item['author'].lstrip('@').lower() for item in tweets}
+          assert len(authors) >= 3
+          print('X_PRODUCTION_LATEST_AGGREGATION_OK', {
+              'count': len(tweets),
+              'authors': len(authors),
+              'latest': tweets[0]['url'],
+          }, flush=True)
           PY
 
       - name: Verify emergency timeline recovery
