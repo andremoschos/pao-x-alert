@@ -34,12 +34,12 @@ jobs:
       - name: Install requests
         run: pip install requests
 
-      - name: Verify true authenticated X Latest searches
+      - name: Verify full production X Latest path
         run: |
           python - <<'PY'
           import x_rsshub_fallback as x
 
-          combined = {}
+          direct = {}
           for query in ('Panathinaikos', '#Panathinaikos'):
               tweets = x._fetch_x_authenticated_keyword(query, 40)
               assert tweets, f'{query}: 0 posts'
@@ -47,7 +47,7 @@ jobs:
               assert len(authors) >= 3, f'{query}: global Latest coverage too narrow: {sorted(authors)}'
               assert all(item['id'].isdigit() and '/status/' in item['url'] for item in tweets)
               for item in tweets:
-                  combined[item['id']] = item
+                  direct[item['id']] = item
               print('X_AUTH_LATEST_SMOKE', {
                   'query': query,
                   'count': len(tweets),
@@ -55,25 +55,30 @@ jobs:
                   'latest': tweets[0]['url'],
               }, flush=True)
 
-          assert combined
+          assert direct
           print('X_AUTH_GLOBAL_LATEST_OK', {
-              'unique_posts': len(combined),
-              'unique_authors': len({item['author'].lower() for item in combined.values()}),
+              'unique_posts': len(direct),
+              'unique_authors': len({item['author'].lower() for item in direct.values()}),
           }, flush=True)
-          PY
 
-      - name: Verify production latest aggregation
-        run: |
-          python - <<'PY'
-          import x_rsshub_fallback as x
-          tweets = x.fetch_many_keywords(['Panathinaikos', '#Panathinaikos'], 120)
-          assert tweets
-          authors = {item['author'].lstrip('@').lower() for item in tweets}
-          assert len(authors) >= 3
-          print('X_PRODUCTION_LATEST_AGGREGATION_OK', {
-              'count': len(tweets),
-              'authors': len(authors),
-              'latest': tweets[0]['url'],
+          general = x.fetch_general(120)
+          assert general
+          general_authors = {item['author'].lstrip('@').lower() for item in general}
+          assert len(general_authors) >= 3
+          print('X_GENERAL_PRODUCTION_OK', {
+              'count': len(general),
+              'authors': len(general_authors),
+              'latest': general[0]['url'],
+          }, flush=True)
+
+          only = x.fetch_many_keywords(['Panathinaikos', '#Panathinaikos'], 120)
+          assert only
+          only_authors = {item['author'].lstrip('@').lower() for item in only}
+          assert len(only_authors) >= 3
+          print('X_ONLY_PAO_PRODUCTION_OK', {
+              'count': len(only),
+              'authors': len(only_authors),
+              'latest': only[0]['url'],
           }, flush=True)
           PY
 
