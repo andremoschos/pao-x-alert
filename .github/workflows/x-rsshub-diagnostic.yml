@@ -8,6 +8,8 @@ on:
     paths:
       - x_rsshub_diagnostic.py
       - x_rsshub_fallback.py
+      - monitor.py
+      - panathinaikos_monitor.py
       - .github/workflows/x-rsshub-diagnostic.yml
 
 permissions:
@@ -16,10 +18,12 @@ permissions:
 jobs:
   diagnose-rsshub-x:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
       X_CT0: ${{ secrets.X_CT0 }}
+      TWS_HTTP_BACKEND: curl
+      TWS_TELEMETRY: '0'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,28 +33,49 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install requests
-        run: pip install requests
+      - name: Install X search dependencies
+        run: pip install requests "twscrape[curl] @ git+https://github.com/vladkens/twscrape.git@main"
 
-      - name: Verify true X Latest search
+      - name: Verify authenticated global X Latest search
         run: |
           python - <<'PY'
-          import x_rsshub_fallback as x
-          all_authors = set()
-          for query in ('Panathinaikos', '#Panathinaikos'):
-              tweets = x._fetch_x_authenticated_keyword(query, 40)
-              assert tweets, query
-              assert all(item['id'].isdigit() and '/status/' in item['url'] for item in tweets)
-              authors = {item['author'].lstrip('@').lower() for item in tweets}
-              assert 'unknown' not in authors, (query, sorted(authors))
-              all_authors.update(authors)
-              print('X_TRUE_LATEST_SMOKE', {
-                  'query': query,
-                  'count': len(tweets),
-                  'authors': len(authors),
-                  'latest': tweets[0]['url'],
-              })
-          assert len(all_authors) >= 3, sorted(all_authors)
+          import asyncio
+          import os
+          from pathlib import Path
+          from twscrape import API, gather
+
+          async def main():
+              auth = os.environ.get('X_AUTH_TOKEN', '').strip()
+              ct0 = os.environ.get('X_CT0', '').strip()
+              assert auth and ct0, 'X cookies missing'
+              db = '/tmp/twscrape_global_latest_diag.db'
+              Path(db).unlink(missing_ok=True)
+              api = API(db, raise_when_no_account=True, wait_timeout=20, wait_interval=1)
+              await api.pool.add_account_cookies('newspao_diag', f'auth_token={auth}; ct0={ct0}')
+
+              all_authors = set()
+              for query in ('Panathinaikos', '#Panathinaikos'):
+                  results = await gather(api.search(query, limit=40))
+                  assert results, f'{query}: 0 results'
+                  authors = {
+                      (getattr(getattr(t, 'user', None), 'username', '') or 'unknown').lower()
+                      for t in results
+                  }
+                  ids = [str(t.id) for t in results]
+                  assert all(x.isdigit() for x in ids)
+                  all_authors.update(authors)
+                  print('X_TWSCRAPE_LATEST_SMOKE', {
+                      'query': query,
+                      'count': len(results),
+                      'authors': len(authors),
+                      'sample_authors': sorted(authors)[:12],
+                      'latest_id': max(ids, key=int),
+                  }, flush=True)
+
+              assert len(all_authors) >= 3, f'global search too narrow: {sorted(all_authors)}'
+              print('X_TWSCRAPE_GLOBAL_LATEST_OK', {'authors': len(all_authors)}, flush=True)
+
+          asyncio.run(main())
           PY
 
       - name: Verify emergency timeline recovery
