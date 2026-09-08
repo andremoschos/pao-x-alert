@@ -18,21 +18,23 @@ NITTER_HOSTS = ["https://xcancel.com"]
 TIMEOUT = 8
 USER_MAX_AGE = timedelta(days=14)
 
-# Accounts already represented in the production PAO X queries plus official
-# Panathinaikos channels. This provides a no-secret recovery lane while X blocks
-# GitHub-hosted browsers and public global-search routes are unavailable.
+# No-secret recovery while GitHub-hosted Chromium is blocked by X.
+# The two extra accounts below were confirmed by a missed-post report on
+# 2026-09-08 and must be included in the Panathinaikos timeline aggregation.
 PAO_TIMELINE_ACCOUNTS = [
     "paofc_",
     "Paobcgr",
     "acpanathinaikos",
     "paobc",
     "fmeetsdata",
+    "Onlypao_gr",
+    "papanikolaouchs",
 ]
 
 GENERAL_QUERY = (
     '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
     '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
-    'from:paobc OR from:fmeetsdata'
+    "from:paobc OR from:fmeetsdata"
 )
 
 
@@ -60,6 +62,7 @@ def _extract_fx_media(status):
             candidates.append(media)
     elif isinstance(media, list):
         candidates = media
+
     out, seen = [], set()
     for item in candidates:
         if not isinstance(item, dict):
@@ -116,12 +119,12 @@ def _fetch_fx_from(base, path, params, label, limit):
         base.rstrip("/") + path,
         params=params,
         timeout=FX_TIMEOUT,
-        headers={"User-Agent": "PAO-Watcher/2.2", "Accept": "application/json"},
+        headers={"User-Agent": "PAO-Watcher/2.3", "Accept": "application/json"},
     )
     if response.status_code not in (200, 404):
         raise RuntimeError(f"{label} HTTP {response.status_code}")
     data = response.json()
-    results = data.get("results") or [] if isinstance(data, dict) else []
+    results = (data.get("results") or []) if isinstance(data, dict) else []
     tweets, seen = [], set()
     for status in results:
         if not isinstance(status, dict) or status.get("type") == "tombstone":
@@ -137,7 +140,10 @@ def _fetch_fx_from(base, path, params, label, limit):
     if not tweets:
         message = str(data.get("message") or "")[:120] if isinstance(data, dict) else ""
         raise RuntimeError(f"{label} returned 0 posts {message}".strip())
-    print(f"X API {label}: {len(tweets)} posts; latest={tweets[0]['created'].isoformat()}", flush=True)
+    print(
+        f"X API {label}: {len(tweets)} posts; latest={tweets[0]['created'].isoformat()}",
+        flush=True,
+    )
     return tweets
 
 
@@ -155,8 +161,11 @@ def _fetch_fx_user(username, limit=40):
 def fetch_users(usernames=None, limit=100):
     usernames = list(usernames or PAO_TIMELINE_ACCOUNTS)
     found, errors = {}, []
-    with ThreadPoolExecutor(max_workers=min(5, max(1, len(usernames)))) as pool:
-        futures = {pool.submit(fetch_user, username, min(30, limit)): username for username in usernames}
+    with ThreadPoolExecutor(max_workers=min(7, max(1, len(usernames)))) as pool:
+        futures = {
+            pool.submit(fetch_user, username, min(30, limit)): username
+            for username in usernames
+        }
         for future in as_completed(futures):
             username = futures[future]
             try:
@@ -166,13 +175,20 @@ def fetch_users(usernames=None, limit=100):
                 errors.append(f"@{username}: {exc}")
     tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)[:limit]
     if not tweets:
-        raise RuntimeError("PAO timeline aggregation returned 0 posts: " + "; ".join(errors[-5:]))
-    print(f"X PAO timeline aggregation: {len(tweets)} posts from {len(usernames)} accounts", flush=True)
+        raise RuntimeError("PAO timeline aggregation returned 0 posts: " + "; ".join(errors[-7:]))
+    print(
+        f"X PAO timeline aggregation: {len(tweets)} posts from {len(usernames)} accounts",
+        flush=True,
+    )
     return tweets
 
 
 def _fetch_fx_keyword(query, limit=40):
-    params = {"q": str(query), "feed": "latest", "count": min(max(int(limit), 1), 100)}
+    params = {
+        "q": str(query),
+        "feed": "latest",
+        "count": min(max(int(limit), 1), 100),
+    }
     errors = []
     for base, label in ((FX_BASE, "FxTwitter search"), (FX_SEARCH_PROXY, "X search proxy")):
         try:
@@ -220,7 +236,10 @@ def _parse_rss(content, limit=100):
 
 def _fetch_path(path, hosts, label, limit, max_age=None):
     errors = []
-    headers = {"User-Agent": "PAO-Watcher-X-RSS-Fallback/1.5", "Accept": "application/rss+xml, application/xml, text/xml, */*"}
+    headers = {
+        "User-Agent": "PAO-Watcher-X-RSS-Fallback/1.6",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    }
     for host in hosts:
         try:
             response = requests.get(host.rstrip("/") + path, timeout=TIMEOUT, headers=headers)
@@ -243,7 +262,13 @@ def _fetch_path(path, hosts, label, limit, max_age=None):
 def _fetch_rss_user(username, limit=40):
     safe = quote(str(username).strip().lstrip("@"), safe="")
     try:
-        return _fetch_path(f"/twitter/user/{safe}/exclude_rts_replies", USER_HOSTS, f"RSSHub user @{safe}", limit, USER_MAX_AGE)
+        return _fetch_path(
+            f"/twitter/user/{safe}/exclude_rts_replies",
+            USER_HOSTS,
+            f"RSSHub user @{safe}",
+            limit,
+            USER_MAX_AGE,
+        )
     except Exception as rss_error:
         print(f"RSSHub user @{safe} failed: {rss_error}; trying Nitter", flush=True)
         return _fetch_path(f"/{safe}/rss", NITTER_HOSTS, f"Nitter user @{safe}", limit, USER_MAX_AGE)
@@ -262,7 +287,10 @@ def fetch_user(username, limit=40):
     try:
         return _fetch_fx_user(username, limit)
     except Exception as fx_error:
-        print(f"FxTwitter user @{str(username).lstrip('@')} failed: {fx_error}; trying RSS", flush=True)
+        print(
+            f"FxTwitter user @{str(username).lstrip('@')} failed: {fx_error}; trying RSS",
+            flush=True,
+        )
         return _fetch_rss_user(username, limit)
 
 
@@ -275,17 +303,21 @@ def fetch_keyword(query, limit=40):
 
 
 def fetch_many_keywords(queries, limit=100):
-    # During the current X/GitHub anti-bot incident, PAO keyword routes have no
-    # verified public search backend. Use known PAO timelines instead of falling
-    # through to blocked Chromium and keep existing state/freshness dedupe.
     normalized = " ".join(str(q or "").lower() for q in queries)
-    if "panathinaikos" in normalized or "παναθη" in normalized or "from:paobc" in normalized or "from:fmeetsdata" in normalized:
+    if (
+        "panathinaikos" in normalized
+        or "παναθη" in normalized
+        or "from:paobc" in normalized
+        or "from:fmeetsdata" in normalized
+    ):
         return fetch_users(PAO_TIMELINE_ACCOUNTS, limit)
+
     unique = []
     for query in queries:
         query = str(query or "").strip()
         if query and query not in unique:
             unique.append(query)
+
     found, errors = {}, []
     with ThreadPoolExecutor(max_workers=min(4, max(1, len(unique)))) as pool:
         futures = {pool.submit(fetch_keyword, q, min(limit, 40)): q for q in unique}
@@ -296,6 +328,7 @@ def fetch_many_keywords(queries, limit=100):
                     found[tweet["id"]] = tweet
             except Exception as exc:
                 errors.append(f"{query!r}: {exc}")
+
     tweets = sorted(found.values(), key=lambda item: int(item["id"]), reverse=True)[:limit]
     if not tweets:
         raise RuntimeError("X feed returned 0 posts: " + "; ".join(errors[-4:]))
