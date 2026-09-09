@@ -9,6 +9,7 @@ import requests
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 X_CHAT_ID = os.environ.get("TELEGRAM_X_CHAT_ID", "-1004415113751").strip()
+GOOGLE_CHAT_ID = os.environ.get("TELEGRAM_GOOGLE_CHAT_ID", "-1004381105904").strip()
 ONLY_PAO_CHAT_ID = os.environ.get("TELEGRAM_ONLY_PAO_CHAT_ID", "").strip()
 
 THREADS = {
@@ -42,6 +43,8 @@ def configured():
 def _chat_for_route(route):
     if route == "x_general" and X_CHAT_ID:
         return X_CHAT_ID
+    if route == "google_news_web" and GOOGLE_CHAT_ID:
+        return GOOGLE_CHAT_ID
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return ONLY_PAO_CHAT_ID
     return CHAT_ID
@@ -49,6 +52,8 @@ def _chat_for_route(route):
 
 def _uses_direct_chat(route):
     if route == "x_general" and X_CHAT_ID:
+        return True
+    if route == "google_news_web" and GOOGLE_CHAT_ID:
         return True
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return True
