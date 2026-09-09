@@ -13,6 +13,7 @@ GOOGLE_CHAT_ID = os.environ.get("TELEGRAM_GOOGLE_CHAT_ID", "-1004381105904").str
 OFFICIAL_CHAT_ID = os.environ.get("TELEGRAM_OFFICIAL_CHAT_ID", "-1004357671462").strip()
 YOUTUBE_CHAT_ID = os.environ.get("TELEGRAM_YOUTUBE_CHAT_ID", "-1004495818407").strip()
 CONFERENCE_CHAT_ID = os.environ.get("TELEGRAM_CONFERENCE_CHAT_ID", "-1004466606707").strip()
+SYSTEM_CHAT_ID = os.environ.get("TELEGRAM_SYSTEM_CHAT_ID", "-1003811856828").strip()
 ONLY_PAO_CHAT_ID = os.environ.get("TELEGRAM_ONLY_PAO_CHAT_ID", "").strip()
 
 THREADS = {
@@ -54,6 +55,8 @@ def _chat_for_route(route):
         return YOUTUBE_CHAT_ID
     if route == "conference_opponents" and CONFERENCE_CHAT_ID:
         return CONFERENCE_CHAT_ID
+    if route == "system" and SYSTEM_CHAT_ID:
+        return SYSTEM_CHAT_ID
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return ONLY_PAO_CHAT_ID
     return CHAT_ID
@@ -69,6 +72,8 @@ def _uses_direct_chat(route):
     if route == "youtube_pao" and YOUTUBE_CHAT_ID:
         return True
     if route == "conference_opponents" and CONFERENCE_CHAT_ID:
+        return True
+    if route == "system" and SYSTEM_CHAT_ID:
         return True
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return True
