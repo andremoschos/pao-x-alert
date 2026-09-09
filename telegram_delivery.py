@@ -8,6 +8,7 @@ import requests
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+X_CHAT_ID = os.environ.get("TELEGRAM_X_CHAT_ID", "-1004415113751").strip()
 ONLY_PAO_CHAT_ID = os.environ.get("TELEGRAM_ONLY_PAO_CHAT_ID", "").strip()
 
 THREADS = {
@@ -39,9 +40,19 @@ def configured():
 
 
 def _chat_for_route(route):
+    if route == "x_general" and X_CHAT_ID:
+        return X_CHAT_ID
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return ONLY_PAO_CHAT_ID
     return CHAT_ID
+
+
+def _uses_direct_chat(route):
+    if route == "x_general" and X_CHAT_ID:
+        return True
+    if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
+        return True
+    return False
 
 
 def _route_for_ntfy_url(url):
@@ -127,7 +138,8 @@ def send(route, title, body, click=None):
         return False
 
     thread = THREADS.get(route, "")
-    if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
+    direct_chat = _uses_direct_chat(route)
+    if direct_chat:
         thread_id = None
     else:
         if not thread:
@@ -149,7 +161,7 @@ def send(route, title, body, click=None):
         "disable_notification": False,
         "link_preview_options": {"is_disabled": True},
     }
-    if route != "only_panathinaikos_x" or not ONLY_PAO_CHAT_ID:
+    if not direct_chat:
         payload["message_thread_id"] = thread_id
 
     try:
@@ -180,7 +192,7 @@ def send(route, title, body, click=None):
 
 def _route_target(route):
     thread = THREADS.get(route, "")
-    if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
+    if _uses_direct_chat(route):
         return _chat_for_route(route), None
     if not thread:
         return _chat_for_route(route), None
