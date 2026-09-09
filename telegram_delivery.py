@@ -11,6 +11,7 @@ CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 X_CHAT_ID = os.environ.get("TELEGRAM_X_CHAT_ID", "-1004415113751").strip()
 GOOGLE_CHAT_ID = os.environ.get("TELEGRAM_GOOGLE_CHAT_ID", "-1004381105904").strip()
 OFFICIAL_CHAT_ID = os.environ.get("TELEGRAM_OFFICIAL_CHAT_ID", "-1004357671462").strip()
+YOUTUBE_CHAT_ID = os.environ.get("TELEGRAM_YOUTUBE_CHAT_ID", "-1004495818407").strip()
 ONLY_PAO_CHAT_ID = os.environ.get("TELEGRAM_ONLY_PAO_CHAT_ID", "").strip()
 
 THREADS = {
@@ -48,6 +49,8 @@ def _chat_for_route(route):
         return GOOGLE_CHAT_ID
     if route == "official_pao" and OFFICIAL_CHAT_ID:
         return OFFICIAL_CHAT_ID
+    if route == "youtube_pao" and YOUTUBE_CHAT_ID:
+        return YOUTUBE_CHAT_ID
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return ONLY_PAO_CHAT_ID
     return CHAT_ID
@@ -59,6 +62,8 @@ def _uses_direct_chat(route):
     if route == "google_news_web" and GOOGLE_CHAT_ID:
         return True
     if route == "official_pao" and OFFICIAL_CHAT_ID:
+        return True
+    if route == "youtube_pao" and YOUTUBE_CHAT_ID:
         return True
     if route == "only_panathinaikos_x" and ONLY_PAO_CHAT_ID:
         return True
@@ -115,15 +120,11 @@ def _safe_text(route, title, body, click=None):
     header = _route_header(route, title)
     cleaned = _clean_body(body)
 
-    # Keep enough room for the header and optional final link.
     if len(cleaned) > 3550:
         cleaned = cleaned[:3520].rstrip() + "\n…"
 
     body_html = html.escape(cleaned)
     parts = [header]
-
-    # Avoid repeating the old ntfy title when the Telegram category header
-    # already provides the context.
     if body_html:
         parts.append(body_html)
 
@@ -133,8 +134,6 @@ def _safe_text(route, title, body, click=None):
         parts.append(f'🔗 <a href="{safe_click}">Άνοιγμα πηγής</a>')
 
     text = "\n\n".join(parts)
-
-    # Telegram sendMessage limit is 4096 characters.
     if len(text) > 4000:
         text = text[:3970].rstrip() + "\n…"
     return text
@@ -229,7 +228,6 @@ def _x_caption(route, tweet):
         parts.append(f'🔗 <a href="{link}">Άνοιγμα ανάρτησης στο X</a>')
 
     caption = "\n\n".join(parts)
-    # Telegram media captions are limited to 1024 chars.
     return caption[:1000]
 
 
@@ -242,11 +240,6 @@ def _telegram_api(method, payload):
 
 
 def send_x_post(route, tweet):
-    """Send X alerts in the original lightweight text-only format.
-
-    Media is intentionally not embedded and link previews stay disabled. This
-    keeps X alerts compact and avoids rendering the whole post in Telegram.
-    """
     author = str(tweet.get("author") or "").strip()
     text = " ".join(str(tweet.get("text") or "").split()).strip()
     if len(text) > 280:
