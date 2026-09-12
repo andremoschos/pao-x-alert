@@ -1,6 +1,7 @@
 import html
 import os
 import re
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -149,6 +150,22 @@ def _safe_text(route, title, body, click=None):
     return text
 
 
+def _retry_after_seconds(response, attempt):
+    retry_after = None
+    try:
+        data = response.json()
+        retry_after = (data.get("parameters") or {}).get("retry_after")
+    except Exception:
+        pass
+    if retry_after is None:
+        retry_after = response.headers.get("Retry-After")
+    try:
+        retry_after = float(retry_after)
+    except Exception:
+        retry_after = float(2 ** attempt)
+    return max(1.0, min(retry_after + 0.5, 65.0))
+
+
 def send(route, title, body, click=None):
     global _last_ok, _last_error, _successful_sends, _failed_sends
 
@@ -184,13 +201,22 @@ def send(route, title, body, click=None):
         payload["message_thread_id"] = thread_id
 
     try:
-        response = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json=payload,
-            timeout=20,
-        )
-        if response.status_code != 200:
-            _last_error = f"Telegram HTTP {response.status_code} route={route}"
+        response = None
+        for attempt in range(3):
+            response = requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                json=payload,
+                timeout=20,
+            )
+            if response.status_code != 429:
+                break
+            _last_error = f"Telegram HTTP 429 route={route}"
+            if attempt < 2:
+                time.sleep(_retry_after_seconds(response, attempt))
+
+        if response is None or response.status_code != 200:
+            status = response.status_code if response is not None else "unknown"
+            _last_error = f"Telegram HTTP {status} route={route}"
             _failed_sends += 1
             return False
         data = response.json()
