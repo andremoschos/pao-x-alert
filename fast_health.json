@@ -168,40 +168,40 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 11539,
-  "runner_started_or_alive_at": "2026-09-12T16:00:18.528239+00:00",
+  "cycle": 11540,
+  "runner_started_or_alive_at": "2026-09-12T16:02:18.573510+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-09-12T16:00:22.010169+00:00",
+      "last_ok": "2026-09-12T16:02:20.976198+00:00",
       "last_error": null,
-      "last_duration_seconds": 3.48,
+      "last_duration_seconds": 2.4,
       "last_attempt": "2026-09-07T23:49:09.988735+00:00"
     },
     "only_panathinaikos_x": {
       "status": "ok",
       "last_attempt": "2026-09-07T23:50:13.117137+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.5,
-      "last_ok": "2026-09-12T16:00:22.508124+00:00"
+      "last_duration_seconds": 0.01,
+      "last_ok": "2026-09-12T16:02:20.981650+00:00"
     },
     "google_news_web": {
       "status": "ok",
-      "last_ok": "2026-09-12T16:00:23.501050+00:00",
+      "last_ok": "2026-09-12T16:02:21.280458+00:00",
       "last_error": null,
-      "last_duration_seconds": 0.99,
+      "last_duration_seconds": 0.3,
       "last_attempt": "2026-08-27T23:30:41.775583+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-09-12T16:01:31.479419+00:00",
+      "last_ok": "2026-09-12T16:03:18.467318+00:00",
       "last_error": null,
-      "last_duration_seconds": 26.24,
+      "last_duration_seconds": 24.83,
       "last_attempt": "2026-09-07T23:51:12.574922+00:00"
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-09-12T16:01:31.481581+00:00",
+      "last_ok": "2026-09-12T16:03:18.469373+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
@@ -210,19 +210,19 @@
       "status": "error",
       "last_ok": "2026-09-12T15:34:24.309376+00:00",
       "last_error": "RuntimeError: Telegram Conference delivery failed for Φράιμπουργκ",
-      "last_duration_seconds": 41.74,
-      "last_attempt": "2026-09-12T16:00:23.501145+00:00"
+      "last_duration_seconds": 32.35,
+      "last_attempt": "2026-09-12T16:02:21.280511+00:00"
     },
     "transferfeed_panathinaikos": {
       "status": "ok",
-      "last_ok": "2026-09-12T16:00:23.501130+00:00",
+      "last_ok": "2026-09-12T16:02:21.280501+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-31T20:03:11.613355+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-09-12T16:01:31.481606+00:00",
-  "last_cycle_duration_seconds": 72.95,
+  "last_cycle_finished_at": "2026-09-12T16:03:18.469398+00:00",
+  "last_cycle_duration_seconds": 59.9,
   "ntfy": {
     "local_budget_day_utc": "2026-09-12",
     "local_successful_publications": 0,
@@ -232,10 +232,10 @@
     "outbox_pending": 0,
     "telegram": {
       "configured": true,
-      "last_ok": "2026-09-12T16:01:31.476713+00:00",
-      "last_error": null,
-      "successful_sends": 935,
-      "failed_sends": 13
+      "last_ok": "2026-09-12T16:02:53.144590+00:00",
+      "last_error": "Telegram HTTP 429 route=conference_opponents",
+      "successful_sends": 957,
+      "failed_sends": 14
     }
   }
 }
