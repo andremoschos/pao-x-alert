@@ -21,6 +21,7 @@ on:
       - "youtube_monitor.py"
       - "telegram_delivery.py"
       - "transferfeed_monitor.py"
+      - "instagram_monitor.py"
       - "requirements.txt"
   schedule:
     # Refresh the long-running runner every 4 hours.
@@ -60,6 +61,12 @@ jobs:
       TELEGRAM_THREAD_YOUTUBE: ${{ secrets.TELEGRAM_THREAD_YOUTUBE }}
       TELEGRAM_THREAD_SYSTEM: ${{ secrets.TELEGRAM_THREAD_SYSTEM }}
       TELEGRAM_THREAD_CONFERENCE: "273"
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_IG_USER_ID: ${{ secrets.INSTAGRAM_IG_USER_ID }}
+      TELEGRAM_INSTAGRAM_CHAT_ID: ${{ secrets.TELEGRAM_INSTAGRAM_CHAT_ID }}
+      INSTAGRAM_TARGETS: ${{ vars.INSTAGRAM_TARGETS }}
+      INSTAGRAM_API_VERSION: ${{ vars.INSTAGRAM_API_VERSION }}
+      INSTAGRAM_POLL_SECONDS: "300"
 
     steps:
       - name: Checkout
@@ -92,7 +99,8 @@ jobs:
             official_x_direct_monitor.py \
             youtube_monitor.py \
             telegram_delivery.py \
-            transferfeed_monitor.py
+            transferfeed_monitor.py \
+            instagram_monitor.py
 
       - name: Retire legacy safety workflows
         env:
