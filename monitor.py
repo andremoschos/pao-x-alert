@@ -20,12 +20,14 @@ MAX_NTFY_BODY_BYTES = 3500
 QUERY = (
     '"παναθηναϊκός" OR "παναθηναϊκού" OR "παναθηναϊκό" OR '
     '"παναθηναικος" OR "παναθηναικου" OR "παναθηναικο" OR '
-    'from:paobc OR from:fmeetsdata'
+    'from:paobc OR from:fmeetsdata OR from:Figurei8ht'
 )
 
 AUTH = os.environ["X_AUTH_TOKEN"]
 CT0 = os.environ["X_CT0"]
 TOPIC = os.environ["NTFY_TOPIC"]
+
+DIRECT_X_ACCOUNTS = ["fmeetsdata", "Figurei8ht"]
 
 
 def load_state():
@@ -239,8 +241,31 @@ async def fetch_latest_browser():
 
 async def fetch_latest():
     try:
-        tweets = await asyncio.to_thread(rss_x.fetch_general, 100)
+        general = await asyncio.to_thread(rss_x.fetch_general, 100)
+        found = {tweet["id"]: tweet for tweet in general}
+
+        direct_results = await asyncio.gather(
+            *(asyncio.to_thread(rss_x.fetch_user, username, 40) for username in DIRECT_X_ACCOUNTS),
+            return_exceptions=True,
+        )
+        for username, result in zip(DIRECT_X_ACCOUNTS, direct_results):
+            if isinstance(result, Exception):
+                print(f"X direct @{username} failed: {result}", flush=True)
+                continue
+            for tweet in result:
+                found[tweet["id"]] = tweet
+
+        tweets = sorted(
+            found.values(),
+            key=lambda item: int(item["id"]),
+            reverse=True,
+        )[:100]
         if tweets:
+            print(
+                f"X general + direct accounts: {len(tweets)} posts; "
+                f"direct={DIRECT_X_ACCOUNTS}",
+                flush=True,
+            )
             return tweets
     except Exception as exc:
         print(f"X combined RSS feed failed: {exc}; trying simple RSS feeds", flush=True)
@@ -257,6 +282,7 @@ async def fetch_latest():
                 "παναθηναικο",
                 "from:paobc",
                 "from:fmeetsdata",
+                "from:Figurei8ht",
             ],
             100,
         )
