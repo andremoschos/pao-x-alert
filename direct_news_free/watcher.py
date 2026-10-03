@@ -337,6 +337,12 @@ async def hydrate(session,item):
 async def discover_recipients(session,state):
     rec=state.get("recipients") or {}; primary=str(rec.get("primary","")).strip(); mirror=str(rec.get("mirror","")).strip()
     if primary and mirror and primary!=mirror: return primary,mirror
+    env_primary=os.getenv("TELEGRAM_PRIMARY_CHAT_ID","").strip()
+    env_mirror=os.getenv("TELEGRAM_MIRROR_CHAT_ID","").strip()
+    if env_primary and env_mirror and env_primary != env_mirror:
+        state["recipients"]={"primary":env_primary,"mirror":env_mirror,"locked_at":now_iso(),"source":"github-secrets"}
+        save_state(state)
+        return env_primary,env_mirror
     if not TOKEN: return None
     try:
         async with session.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates",timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT)) as r: payload=await r.json(content_type=None)
