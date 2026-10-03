@@ -25,11 +25,10 @@ jobs:
     timeout-minutes: 235
     env:
       PYTHONUNBUFFERED: "1"
-      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 }}
-      # Safe migration phase: Railway keeps real delivery while this public
-      # runner builds an identical no-replay baseline. We flip this only after
-      # Telegram credentials/recipients are verified here.
-      DIRECT_NEWS_DELIVERY_ENABLED: "0"
+      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
+      # Controlled parallel validation: Railway remains live while GitHub sends the same new direct alerts with a FREE TEST marker.
+      DIRECT_NEWS_DELIVERY_ENABLED: "1"
+      DIRECT_NEWS_TEST_LABEL: "1"
       DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
 
     steps:
@@ -71,7 +70,7 @@ jobs:
           assert total == 125
           PY
 
-      - name: Run Railway-free shadow watcher
+      - name: Run Railway-free parallel validation
         working-directory: direct_news_free
         run: python watcher.py
 
