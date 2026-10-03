@@ -45,6 +45,7 @@ MAX_ARTICLE_AGE_HOURS = max(1, int(os.getenv("DIRECT_NEWS_MAX_AGE_HOURS", "6")))
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN_V2", "").strip()
 DELIVERY_ENABLED = os.getenv("DIRECT_NEWS_DELIVERY_ENABLED", "0").strip() == "1"
+TEST_LABEL = os.getenv("DIRECT_NEWS_TEST_LABEL", "0").strip() == "1"
 UA = "Mozilla/5.0 (compatible; PAODirectNewsFree/1.0; +https://github.com/andremoschos/pao-x-alert)"
 TRACKING = {"utm_source","utm_medium","utm_campaign","utm_term","utm_content","fbclid","gclid","ref","source","output"}
 EXCLUDED_PATHS = ("/tag/","/tags/","/category/","/author/","/search","/login","/register","/privacy","/terms","/contact","/feed","/rss","/wp-content/")
@@ -357,16 +358,19 @@ async def tg_post(session,chat_id,text):
         payload=await r.json(content_type=None)
         if not payload.get("ok"): raise RuntimeError(payload)
 
-async def send_alert(session,state,item,prefix="🚨 <b>ΝΕΟ ΓΙΑ ΠΑΝΑΘΗΝΑΪΚΟ</b>"):
+async def send_alert(session,state,item,prefix=""):
     if not DELIVERY_ENABLED: log.info("SHADOW would send | %s | %s",item.source,(item.title or item.url)[:120]); return
     if not TOKEN: raise RuntimeError("TELEGRAM_BOT_TOKEN_V2 missing")
     recipients=await discover_recipients(session,state)
     if not recipients: raise RuntimeError("Two Telegram /start recipients not discovered")
     src=html.escape((item.source or "Άγνωστη πηγή")[:80]); title=html.escape(re.sub(r"\s+"," ",item.title or "Νέα δημοσίευση").strip()[:500]); url=html.escape(item.url,quote=True); pub=html.escape((item.published or "τώρα")[:80])
-    text=f"{prefix}\n🟢 <b>{src}</b>\n📰 {title}\n🕒 {pub}\n🔗 <a href=\"{url}\">Άνοιγμα άρθρου</a>"
+    marker = "🧪 <b>FREE TEST</b>\n" if TEST_LABEL else ""
+    extra = (prefix + "\n") if prefix else ""
+    text=f"{marker}{extra}🟢 <b>{src}</b>\n{title}\n🕒 {pub} · 🔗 <a href=\"{url}\">Άνοιγμα</a>"
     primary,mirror=recipients; await tg_post(session,primary,text)
     try: await tg_post(session,mirror,text)
     except Exception as exc: log.warning("Telegram mirror failed after primary: %s",exc)
+    log.info("FREE TEST SENT | %s | %s | %s", item.source, (item.title or item.url)[:120], item.url)
 
 async def process_source(session,state,source,health):
     started=time.time(); body,final,status=await fetch(session,source.url); h=health["sources"].setdefault(source.name,{})
