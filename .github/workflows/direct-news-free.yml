@@ -1,0 +1,83 @@
+name: PAO Direct News Free
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "direct_news_free/watcher.py"
+      - "direct_news_free/requirements.txt"
+      - ".github/workflows/direct-news-free.yml"
+  schedule:
+    - cron: "13 */4 * * *"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: pao-direct-news-free
+  cancel-in-progress: true
+
+jobs:
+  direct-news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 235
+    env:
+      PYTHONUNBUFFERED: "1"
+      TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 }}
+      # Safe migration phase: Railway keeps real delivery while this public
+      # runner builds an identical no-replay baseline. We flip this only after
+      # Telegram credentials/recipients are verified here.
+      DIRECT_NEWS_DELIVERY_ENABLED: "0"
+      DIRECT_NEWS_MAX_RUNTIME_SECONDS: "13200"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install direct-news dependencies
+        working-directory: direct_news_free
+        run: pip install -r requirements.txt
+
+      - name: Preflight source parity and syntax
+        working-directory: direct_news_free
+        shell: bash
+        run: |
+          python -m py_compile watcher.py
+          python - <<'PY'
+          import watcher
+          counts = {
+              "core": len(watcher.CORE_SOURCES),
+              "restored": len(watcher.RESTORED_SOURCES),
+              "international_priority": len(watcher.INTL_PRIORITY_SOURCES),
+              "international_broad": len(watcher.INTL_BROAD_SOURCES),
+          }
+          total = sum(counts.values())
+          print("SOURCE PARITY", counts, "total_direct_pages=", total, "special_lanes=2")
+          assert counts == {
+              "core": 39,
+              "restored": 39,
+              "international_priority": 24,
+              "international_broad": 23,
+          }, counts
+          assert total == 125
+          PY
+
+      - name: Run Railway-free shadow watcher
+        working-directory: direct_news_free
+        run: python watcher.py
+
+      - name: Hand off to fresh runner
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run direct-news-free.yml --repo "$GITHUB_REPOSITORY" --ref main || true
