@@ -26,6 +26,8 @@ jobs:
     env:
       PYTHONUNBUFFERED: "1"
       TELEGRAM_BOT_TOKEN_V2: ${{ secrets.TELEGRAM_BOT_TOKEN_V2 || secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_PRIMARY_CHAT_ID: ${{ secrets.TELEGRAM_PRIMARY_CHAT_ID }}
+      TELEGRAM_MIRROR_CHAT_ID: ${{ secrets.TELEGRAM_MIRROR_CHAT_ID }}
       # Controlled parallel validation: Railway remains live while GitHub sends the same new direct alerts with a FREE TEST marker.
       DIRECT_NEWS_DELIVERY_ENABLED: "1"
       DIRECT_NEWS_TEST_LABEL: "1"
