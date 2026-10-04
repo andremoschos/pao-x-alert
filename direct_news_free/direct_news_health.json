@@ -1,0 +1,1113 @@
+{
+  "checked_at": "2026-10-04T01:00:29.982639+00:00",
+  "lanes": {
+    "protothema_rss": {
+      "http_status": 200,
+      "items": 80,
+      "last_attempt": "2026-10-04T00:45:33.975893+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:48:52.779746+00:00",
+      "sent": 0,
+      "status": "ok"
+    },
+    "sport_fm_tv_keyword": {
+      "errors": [],
+      "items": 36,
+      "last_ok": "2026-10-04T00:45:34.224201+00:00",
+      "sent": 0,
+      "status": "ok"
+    }
+  },
+  "last_cycle_duration_seconds": 896.74,
+  "last_cycle_finished_at": "2026-10-04T01:00:29.937526+00:00",
+  "mode": "production",
+  "runner_alive_at": "2026-10-04T00:45:33.197302+00:00",
+  "source_inventory": {
+    "core": 39,
+    "international_broad": 23,
+    "international_priority": 24,
+    "restored": 39,
+    "special_lanes": 2,
+    "total_direct_pages": 125
+  },
+  "sources": {
+    "24Sports Cyprus": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:08.517879+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "A Bola": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173728+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "AS Panathinaikos": {
+      "duration": 0.54,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:14.208960+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:14.263045+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 40
+    },
+    "ASTRATV": {
+      "duration": 5.62,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:47:13.001715+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:47:13.102038+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Agrinio24": {
+      "duration": 15.78,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:14.061713+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Athletiko Latest": {
+      "duration": 0.43,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:33.518936+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:33.635812+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 89
+    },
+    "BBC Sport": {
+      "duration": 9.09,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:42.208870+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:42.301133+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 100
+    },
+    "BasketNews": {
+      "duration": 6.66,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:34.624470+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "Basketball Sphere Panathinaikos": {
+      "duration": 2.85,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:54:04.687436+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:54:04.763703+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Basketinside": {
+      "duration": 2.63,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:35.838096+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:35.840107+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 0
+    },
+    "Bet.gr": {
+      "duration": 15.8,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:50:05.440065+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Betarades News": {
+      "duration": 2.15,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:50:16.972387+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:50:17.281617+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Betarades TV": {
+      "duration": 1.25,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:50:41.731957+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:50:41.977590+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Betarades Web": {
+      "duration": 4.36,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:50:09.413333+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:50:09.805404+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Betmarket": {
+      "duration": 2.11,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:51.374018+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "CNN Greece Sports": {
+      "duration": 2.12,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:55:38.108180+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:55:38.143840+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 46
+    },
+    "Contra": {
+      "duration": 9.88,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:49:03.507812+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:49:03.544555+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 24
+    },
+    "DZFoot": {
+      "duration": 15.95,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:36.260649+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "De Telegraaf Sport": {
+      "duration": 9.13,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:45:58.303820+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "Dsport Bulgaria": {
+      "duration": 7.06,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:12.344257+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:12.414812+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "ERT Sports Panathinaikos": {
+      "duration": 2.64,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:53:28.065672+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:53:28.110519+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 26
+    },
+    "ESPN": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173659+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "EuroLeague Official": {
+      "duration": 16.67,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:48:53.660375+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Eurohoops EL": {
+      "duration": 15.96,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:39.437077+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Eurohoops EN": {
+      "duration": 1.82,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:48:59.632009+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:48:59.701335+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 98
+    },
+    "Eurohoops Panathinaikos": {
+      "duration": 4.3,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:54:06.943805+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:54:06.974893+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 46
+    },
+    "Fanatik": {
+      "duration": 3.14,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:36.301453+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:36.342327+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 74
+    },
+    "Filathlos": {
+      "duration": 7.31,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:47:01.888194+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:47:01.958819+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 26
+    },
+    "Foot Mercato": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173633+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Fotomac": {
+      "duration": 16.18,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:05.357332+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Foxbet Web": {
+      "duration": 9.88,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:50:07.364641+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:50:07.699992+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Gazzetta Latest": {
+      "duration": 0.52,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:33.638206+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:33.720526+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Gazzetta Panathinaikos": {
+      "duration": 16.77,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:30.828853+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Gazzetta dello Sport": {
+      "duration": 1.99,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:35.008043+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:35.194808+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Gigantes del Basket": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173749+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Globo Esporte": {
+      "duration": 5.53,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:26.719264+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:26.871568+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Gol.hr": {
+      "duration": 14.97,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:46:04.145028+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "Gong Bulgaria": {
+      "duration": 9.51,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:14.733944+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:14.864126+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 75
+    },
+    "HLN Sport": {
+      "duration": 11.52,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:09.827089+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:09.828519+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 0
+    },
+    "Hesport": {
+      "duration": 15.98,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:21.341655+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Index Sport": {
+      "duration": 16.17,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:20.310559+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Kerkida": {
+      "duration": 16.36,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:54.051632+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:54.276903+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Kicker": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173683+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "L'Équipe Panathinaikos": {
+      "duration": 0.3,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:56:13.720907+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "Lance": {
+      "duration": 16.5,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:42.488984+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Le360 Sport": {
+      "duration": 16.01,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:25.985451+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Marca": {
+      "duration": 1.77,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.814426+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.979376+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Menshouse": {
+      "duration": 2.83,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:49:54.144575+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:49:54.206333+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 48
+    },
+    "Meridian Sport": {
+      "duration": 1.2,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.353346+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.408454+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 84
+    },
+    "Metrosport Panathinaikos": {
+      "duration": 2.55,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:53:25.766150+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:53:25.799197+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 26
+    },
+    "Monobala Latest V2": {
+      "duration": 1.45,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.594744+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.653083+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 29
+    },
+    "Monobala Panathinaikos V2": {
+      "duration": 1.51,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.653632+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.714473+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 27
+    },
+    "Monobala Tag V2": {
+      "duration": 1.29,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.409645+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.493901+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 28
+    },
+    "Mozzart Sport": {
+      "duration": 1.39,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.495890+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.593162+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Mundo Deportivo": {
+      "duration": 3.38,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:36.428585+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:36.585102+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Naftemporiki Sports": {
+      "duration": 1.89,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:11.723695+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:11.796940+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 92
+    },
+    "News247 Sports": {
+      "duration": 0.44,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:55:02.576952+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:55:02.682751+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 94
+    },
+    "NewsPao Basket": {
+      "duration": 7.95,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:44.175663+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "NewsPao Erasitechnis": {
+      "duration": 4.98,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:49.155274+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "NewsPao Flow": {
+      "duration": 1.0,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:36.228026+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "NewsPao Football": {
+      "duration": 7.07,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:43.293803+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "NewsPao Home": {
+      "duration": 0.54,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:35.229027+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "NewsPao Volei": {
+      "duration": 0.5,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:44.238215+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "Newsbeast Sports": {
+      "duration": 1.92,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:51:34.592250+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:51:34.681683+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 91
+    },
+    "Nogomania": {
+      "duration": 16.28,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:52.544592+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Novasports Newsroom": {
+      "duration": 11.92,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:50.277439+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:50.365740+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "O Jogo": {
+      "duration": 9.63,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:45:42.840740+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "OlaPrasina1908": {
+      "duration": 5.16,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:48:05.478625+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:48:05.537999+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 55
+    },
+    "Ole Argentina": {
+      "duration": 4.33,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:46.705316+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:46.816183+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Ole Panathinaikos": {
+      "duration": 12.68,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:48:06.228197+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:48:06.256823+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 49
+    },
+    "Onsports Latest": {
+      "duration": 15.68,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:38.443030+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "PAO 1908 Official": {
+      "duration": 2.57,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:54:37.815913+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:54:37.850934+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 100
+    },
+    "PAO BC Official": {
+      "duration": 15.72,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:48:36.993040+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "PAO FC Official": {
+      "duration": 15.46,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:48:21.267370+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "PAO Pantou": {
+      "duration": 16.37,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:27.628273+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Panathinaikos24 Latest": {
+      "duration": 16.07,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:54.518591+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Panorama Sport": {
+      "duration": 15.98,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:21.341706+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Parapolitika Sports": {
+      "duration": 3.15,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:54:41.548337+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:54:41.615986+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 51
+    },
+    "Pick and Roll": {
+      "duration": 15.7,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:23.478817+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Prasinoforos": {
+      "duration": 3.49,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:53:17.393219+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:53:17.460478+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 46
+    },
+    "RMC Sport": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173706+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "RTBF Sport": {
+      "duration": 11.38,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:00.411185+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:00.553499+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Radar Agent Stories": {
+      "duration": 2.25,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:52:53.047963+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:52:53.076730+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 22
+    },
+    "Record Portugal": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173513+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Regista": {
+      "duration": 16.1,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:11.254377+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "SDNA News": {
+      "duration": 0.57,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:33.721314+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:33.778751+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "SDNA Panathinaikos": {
+      "duration": 2.98,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:53:10.232016+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:53:10.296215+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "SDNA Panathinaikos Aktor": {
+      "duration": 0.7,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:53:13.579686+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "SDNA Panathinaikos Football": {
+      "duration": 0.02,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:53:12.878134+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "SKAI Sports": {
+      "duration": 0.89,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:09.392858+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:09.420493+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 35
+    },
+    "Sky Sports": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173604+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Sport Bild": {
+      "duration": 5.95,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:39.071477+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:39.155133+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Sport24 Latest": {
+      "duration": 0.23,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:33.346949+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:33.437201+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 58
+    },
+    "SportFM Latest": {
+      "duration": 2.07,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:35.200635+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:35.274755+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 78
+    },
+    "Sportal": {
+      "duration": 1.02,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:34.159390+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:34.220299+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 97
+    },
+    "Sportal Bulgaria": {
+      "duration": 16.18,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:05.357365+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Sportando": {
+      "duration": 0.77,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:33.890184+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:33.972040+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 60
+    },
+    "Sportdog Latest": {
+      "duration": 15.68,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:38.442656+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Sportklub BC Panathinaikos": {
+      "duration": 1.11,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:12.133562+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:12.192266+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 0
+    },
+    "Sportklub Panathinaikos": {
+      "duration": 0.62,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:13.322994+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:13.380751+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 0
+    },
+    "Sportklub Panathinaikos FC": {
+      "duration": 0.47,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:12.654601+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:12.714771+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 0
+    },
+    "Sportmedia MK": {
+      "duration": 16.57,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:37.910681+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Sportske Novosti": {
+      "duration": 16.18,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:05.357278+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Sporx": {
+      "duration": 4.29,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:40.382884+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:40.463962+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "Sporza": {
+      "duration": 13.99,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:03.095776+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:03.162605+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 85
+    },
+    "StoiximaView News": {
+      "duration": 1.62,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:50:42.183812+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:50:42.346012+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "TA NEA Panathinaikos": {
+      "duration": 12.46,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:47:43.237787+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:47:43.292489+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 53
+    },
+    "TA NEA Sports": {
+      "duration": 0.3,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:33.443781+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:33.502586+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 47
+    },
+    "The Athletic": {
+      "duration": 5.27,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:45:48.216519+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "The Guardian Football": {
+      "duration": 13.33,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:46:01.677552+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:46:01.777397+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 120
+    },
+    "To Vima Sports": {
+      "duration": 1.53,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:56:11.845516+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:56:11.898377+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 71
+    },
+    "To10 Blog View": {
+      "duration": 16.07,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:22.762955+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "To10 Panathinaikos": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:43.596887+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "TransferFeed Global": {
+      "duration": 16.56,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:07.482049+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "TransferFeed Panathinaikos": {
+      "duration": 15.71,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:55.149152+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Trifilara": {
+      "duration": 13.69,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:48:13.091862+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:48:13.180270+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 89
+    },
+    "Tuttosport": {
+      "duration": 15.97,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:45:49.173570+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "Voetbal International": {
+      "duration": 7.35,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:45:56.461119+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:45:56.525795+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 92
+    },
+    "beIN Panathinaikos": {
+      "duration": 2.47,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:49:36.268001+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:49:36.297527+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 11
+    },
+    "iNewsGR Panathinaikos": {
+      "duration": 0.42,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:49.639133+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "iNewsGR Sports": {
+      "duration": 5.03,
+      "http_status": 403,
+      "last_attempt": "2026-10-04T00:49:49.268240+00:00",
+      "last_error": "fetch failed HTTP 403",
+      "status": "error"
+    },
+    "iefimerida Sports": {
+      "duration": 3.32,
+      "http_status": 200,
+      "last_attempt": "2026-10-04T00:55:06.171829+00:00",
+      "last_error": null,
+      "last_ok": "2026-10-04T00:55:06.196713+00:00",
+      "sent": 0,
+      "status": "ok",
+      "visible_items": 13
+    },
+    "in.gr Panathinaikos": {
+      "duration": 15.89,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:47:59.487748+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "in.gr inSports": {
+      "duration": 16.07,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:22.762612+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    },
+    "talkSPORT": {
+      "duration": 16.18,
+      "http_status": 0,
+      "last_attempt": "2026-10-04T00:46:05.357400+00:00",
+      "last_error": "fetch failed HTTP 0",
+      "status": "error"
+    }
+  },
+  "started_at": "2026-10-04T00:45:33.197067+00:00",
+  "telegram_secret_present": true
+}
