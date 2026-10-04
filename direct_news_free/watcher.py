@@ -336,13 +336,13 @@ async def hydrate(session,item):
 
 async def discover_recipients(session,state):
     rec=state.get("recipients") or {}; primary=str(rec.get("primary","")).strip(); mirror=str(rec.get("mirror","")).strip()
-    if primary and mirror and primary!=mirror: return primary,mirror
+    if primary: return primary, (mirror if mirror and mirror != primary else "")
     env_primary=os.getenv("TELEGRAM_PRIMARY_CHAT_ID","").strip()
     env_mirror=os.getenv("TELEGRAM_MIRROR_CHAT_ID","").strip()
-    if env_primary and env_mirror and env_primary != env_mirror:
-        state["recipients"]={"primary":env_primary,"mirror":env_mirror,"locked_at":now_iso(),"source":"github-secrets"}
+    if env_primary:
+        state["recipients"]={"primary":env_primary,"mirror":env_mirror if env_mirror != env_primary else "","locked_at":now_iso(),"source":"github-env"}
         save_state(state)
-        return env_primary,env_mirror
+        return env_primary, (env_mirror if env_mirror != env_primary else "")
     if not TOKEN: return None
     try:
         async with session.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates",timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT)) as r: payload=await r.json(content_type=None)
@@ -374,8 +374,9 @@ async def send_alert(session,state,item,prefix=""):
     extra = (prefix + "\n") if prefix else ""
     text=f"{marker}{extra}🟢 <b>{src}</b>\n{title}\n🕒 {pub} · 🔗 <a href=\"{url}\">Άνοιγμα</a>"
     primary,mirror=recipients; await tg_post(session,primary,text)
-    try: await tg_post(session,mirror,text)
-    except Exception as exc: log.warning("Telegram mirror failed after primary: %s",exc)
+    if mirror:
+        try: await tg_post(session,mirror,text)
+        except Exception as exc: log.warning("Telegram mirror failed after primary: %s",exc)
     log.info("FREE TEST SENT | %s | %s | %s", item.source, (item.title or item.url)[:120], item.url)
 
 async def process_source(session,state,source,health):
@@ -479,7 +480,7 @@ async def main():
     async with aiohttp.ClientSession(connector=connector) as session:
         if DELIVERY_ENABLED:
             if not TOKEN: raise SystemExit("Delivery enabled but TELEGRAM_BOT_TOKEN_V2 is missing")
-            if not await discover_recipients(session,state): raise SystemExit("Delivery enabled but two Telegram /start recipients were not found")
+            if not await discover_recipients(session,state): raise SystemExit("Delivery enabled but no Telegram recipient was available")
         while not STOP.is_set() and time.monotonic()-start<MAX_RUNTIME_SECONDS:
             now_m=time.monotonic(); health["runner_alive_at"]=now_iso(); tasks=[]
             if not last_core or now_m-last_core>=POLL_SECONDS: tasks.append(process_group(session,state,CORE_SOURCES+RESTORED_SOURCES,health)); last_core=now_m
