@@ -96,6 +96,8 @@ CORE_SOURCES = [
     Source("Agrinio24","https://agrinio24.gr/"),
     Source("ASTRATV","https://www.astratv.gr/"),
     Source("PAO Pantou","https://paopantou.gr/?post_type=post",True),
+    Source("Mononews Home","https://www.mononews.gr/"),
+    Source("Mononews Sports","https://www.mononews.gr/category/business/sports-business"),
     Source("Gazzetta Panathinaikos","https://www.gazzetta.gr/teams/panathinaikos",True),
     Source("To10 Panathinaikos","https://www.to10.gr/team/panathinaikos/",True),
     Source("TA NEA Panathinaikos","https://www.tanea.gr/tag/%cf%80%ce%b1%ce%bd%ce%b1%ce%b8%ce%b7%ce%bd%ce%b1%cf%8a%ce%ba%cf%8c%cf%82/",True),
