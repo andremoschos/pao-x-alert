@@ -64,12 +64,12 @@ jobs:
           total = sum(counts.values())
           print("SOURCE PARITY", counts, "total_direct_pages=", total, "special_lanes=2")
           assert counts == {
-              "core": 39,
+              "core": 41,
               "restored": 39,
               "international_priority": 24,
               "international_broad": 23,
           }, counts
-          assert total == 125
+          assert total == 127
           PY
 
       - name: Run Railway-free parallel validation
