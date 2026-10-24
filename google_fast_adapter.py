@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import google_monitor as google
+import telegram_delivery as telegram
 
 
 MAX_WORKERS = 6
@@ -80,6 +81,10 @@ def main():
     IDs belonging to batches that ntfy actually accepts are persisted as seen;
     failed/blocked entries stay pending for a later cycle.
     """
+    if telegram.GOOGLE_NEWS_WEB_PAUSED:
+        print("Google News / Web: PAUSED by owner; no messages or catch-up", flush=True)
+        return
+
     original_get = google.requests.get
     original_web_fetch = google.fetch_web_alert
     original_news_fetch = google.fetch_google_news_edition
