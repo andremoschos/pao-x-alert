@@ -7,6 +7,10 @@ from datetime import datetime, timezone
 import requests
 
 
+# Owner-requested temporary pause of the dedicated Google News / Web channel.
+# Set to False to resume without changing any other alert destination.
+GOOGLE_NEWS_WEB_PAUSED = True
+
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 X_CHAT_ID = os.environ.get("TELEGRAM_X_CHAT_ID", "-1004415113751").strip()
@@ -168,6 +172,10 @@ def _retry_after_seconds(response, attempt):
 
 def send(route, title, body, click=None):
     global _last_ok, _last_error, _successful_sends, _failed_sends
+
+    # Acknowledge the paused route without sending or triggering ntfy fallback.
+    if route == "google_news_web" and GOOGLE_NEWS_WEB_PAUSED:
+        return True
 
     if not configured():
         _last_error = "Telegram secrets missing"
