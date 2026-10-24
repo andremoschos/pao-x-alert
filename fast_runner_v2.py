@@ -182,6 +182,15 @@ def flush_ntfy_outbox():
 
     _refresh_ntfy_budget_day()
     items = _load_ntfy_outbox()
+    if telegram.GOOGLE_NEWS_WEB_PAUSED:
+        active_items = [
+            item for item in items
+            if telegram._route_for_ntfy_url(item.get("url", "")) != "google_news_web"
+        ]
+        if len(active_items) != len(items):
+            _save_ntfy_outbox(active_items)
+            print("Google News / Web paused: discarded queued catch-up only for this route", flush=True)
+        items = active_items
     if not items:
         return 0
 
@@ -602,7 +611,13 @@ async def main():
 
         await run_component("x_general", x_general.main, health)
         await run_component("only_panathinaikos_x", only_x.main, health)
-        await run_component("google_news_web", google.main, health)
+        if telegram.GOOGLE_NEWS_WEB_PAUSED:
+            health.setdefault("components", {}).setdefault("google_news_web", {}).update(
+                {"status": "paused", "last_error": None, "last_attempt": now_iso()}
+            )
+            print("google_news_web: PAUSED (owner requested)", flush=True)
+        else:
+            await run_component("google_news_web", google.main, health)
         await run_component("transferfeed_panathinaikos", transferfeed.main, health)
         await run_component("conference_opponents", conference.main, health)
         await run_component("official_pao", official_cycle, health)
