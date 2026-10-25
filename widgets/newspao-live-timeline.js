@@ -110,9 +110,8 @@
   }
   async function findMatch() {
     const paths = [
-      '/api/v1/fixtures/?sport=football&date=' + encodeURIComponent(day) + '&team=' + encodeURIComponent(teamSlug) + '&limit=200',
       '/api/widget/team/?sport=football&slug=' + encodeURIComponent(teamSlug) + '&limit=30',
-      '/api/v1/fixtures/?sport=football&date=' + encodeURIComponent(day) + '&limit=200'
+      '/api/widget/matches/?sport=football&limit=50'
     ];
     for (const path of paths) {
       try {
@@ -128,7 +127,7 @@
       if (!matchSlug) {
         fixture = await findMatch();
         if (!fixture) {
-          if (pitch) pitch.style.display = 'none';
+          if (pitch) pitch.style.display = '';
           status.textContent = 'Αναμονή δεδομένων';
           note('Δεν έχει βρεθεί ακόμη επιβεβαιωμένη ροή για αυτόν τον αγώνα.');
           return;
@@ -143,7 +142,9 @@
       if (hs !== undefined && as !== undefined && hs !== null && as !== null) score.textContent = hs + ' – ' + as;
       const currentStatus = m.status_text || m.status || fixture.status_text || fixture.status || '';
       status.textContent = translateStatus(currentStatus);
-      if (pitch) pitch.style.display = /finished|fulltime|ended/.test(normalize(currentStatus)) ? 'none' : '';
+      if (pitch) pitch.style.display = '';
+      const placeholder = pitch?.querySelector('[data-np-pitch-placeholder]');
+      if (placeholder && pitch.querySelector('iframe') && /live|inprogress|firsthalf|secondhalf/.test(normalize(currentStatus))) placeholder.style.display = 'none';
       let events = m.timeline ?? m.events ?? m.incidents ?? j.timeline ?? j.events ?? [];
       if (!Array.isArray(events)) events = events.events || events.items || [];
       render(Array.isArray(events)?events:[]);
