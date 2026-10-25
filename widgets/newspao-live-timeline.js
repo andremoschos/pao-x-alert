@@ -91,6 +91,17 @@
     if (v && typeof v === 'object') v = v.elapsed ?? v.minute ?? '';
     return String(v).trim().replace(/[′']/g,'');
   }
+  // Chat-like live match events panel, fed by SportScore structured facts.
+  const chatCss = document.createElement('style');
+  chatCss.textContent = '.np-match-chat{max-height:450px;overflow-y:auto;overscroll-behavior:contain}' +
+    '.np-match-chat .np-event{display:flex;gap:10px;padding:11px 1px;border-bottom:1px solid #e5ede7;line-height:1.5}' +
+    '.np-match-chat .np-minute{min-width:47px;color:#127140;font-weight:800;flex-shrink:0}' +
+    '.np-match-chat .np-label{display:inline-block;background:#e9f4ed;border-radius:5px;padding:2px 7px;font-size:11px;color:#135b36;margin-right:6px;font-weight:800}' +
+    '.np-match-chat .np-event-body{font-size:14px;flex:1}' +
+    '.np-match-chat .np-feed-info{font-size:11px;color:#65786e;margin:12px 0 2px}';
+  document.head.append(chatCss);
+  timeline.classList.add('np-match-chat');
+  let lastEventSignature = '';
   function render(events) {
     const found = new Set(), rows = [];
     for (const e of events) {
@@ -100,20 +111,45 @@
       const key = m + '|' + description;
       if (found.has(key)) continue;
       found.add(key);
-      rows.push({minute:m, text:description});
+      rows.push({minute:m,text:description});
     }
-    rows.sort((a,b) => parseInt(b.minute,10)-parseInt(a.minute,10));
-    if (!rows.length) {note('Δεν έχουν καταγραφεί ακόμη διαθέσιμες φάσεις.');return;}
+    rows.sort((a,b)=>{
+      const aa=a.minute.split('+').map(Number),bb=b.minute.split('+').map(Number);
+      return (bb[0]-aa[0])||((bb[1]||0)-(aa[1]||0));
+    });
+    if (!rows.length) {
+      note('Η πηγή δεν έχει δώσει ακόμη επιβεβαιωμένα γεγονότα.');
+      return;
+    }
+    const signature=JSON.stringify(rows);
+    if (signature===lastEventSignature) return;
+    lastEventSignature=signature;
     timeline.replaceChildren();
     for (const row of rows) {
-      const el = document.createElement('div');
-      el.style.cssText = 'padding:12px 0;border-bottom:1px solid #e1ece5;line-height:1.55';
-      const min = document.createElement('strong');
-      min.style.cssText = 'color:#147144;margin-right:12px';
-      min.textContent = row.minute + '′';
-      el.append(min,document.createTextNode(row.text));
-      timeline.append(el);
+      const el=document.createElement('div');
+      el.className='np-event';
+      const min=document.createElement('strong');
+      min.className='np-minute';min.textContent=row.minute+'′';
+      const body=document.createElement('div');
+      body.className='np-event-body';
+      const tag=document.createElement('span');
+      tag.className='np-label';
+      tag.textContent=/ΓΚΟΛ|Αυτογκόλ/.test(row.text)?'ΓΚΟΛ':
+        /κάρτα/.test(row.text)?'ΚΑΡΤΑ':
+        /Αλλαγή/.test(row.text)?'ΑΛΛΑΓΗ':
+        /πέναλτι|Πέναλτι/.test(row.text)?'ΠΕΝΑΛΤΙ':'ΦΑΣΗ';
+      const txt=document.createElement('span');
+      txt.textContent=row.text;
+      body.append(tag,txt);el.append(min,body);timeline.append(el);
     }
+    const foot=document.createElement('div');
+    foot.className='np-feed-info';
+    foot.append(document.createTextNode('Αυτόματη ανανέωση περίπου ανά λεπτό · '));
+    const credit=document.createElement('a');
+    credit.href='https://sportscore.com/';
+    credit.rel='dofollow';credit.title='Sports data by SportScore';
+    credit.textContent='Powered by SportScore';
+    foot.append(credit);timeline.append(foot);
   }
   function translateStatus(v) {
     const s = normalize(v);
@@ -172,5 +208,5 @@
     }
   }
   update();
-  setInterval(update, 120000);
+  setInterval(update, 65000);
 })();
