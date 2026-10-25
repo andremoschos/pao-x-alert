@@ -28,12 +28,18 @@
     const h = normalize(side(m, 'home')), a = normalize(side(m, 'away'));
     return h.includes(normalize(homeKey)) && a.includes(normalize(awayKey));
   };
+  const getSlug = m => {
+    if (m.slug) return String(m.slug);
+    const u = String(m.url || m.match_url || m.href || '');
+    const match = u.match(/\/football\/match\/[^/]+\/([^/?#]+)/);
+    return match ? match[1] : '';
+  };
   const dated = m => {
     const s = String(m.date || m.time || m.start_time || m.startTime || m.kickoff || '');
     return !s || s.slice(0, 10) === day;
   };
   const matches = j => {
-    const x = j.matches ?? j.fixtures ?? j.results ?? j.items ?? j.data?.matches ?? j.data?.fixtures ?? j.data?.items ?? j.data ?? [];
+    const x = j.matches ?? j.fixtures ?? j.results ?? j.items ?? j.data?.matches ?? j.data?.fixtures ?? j.data?.items ?? j.data?.events ?? j.data ?? [];
     return Array.isArray(x) ? x : [];
   };
   async function get(path) {
@@ -49,8 +55,8 @@
     timeline.append(p);
   }
   function describe(e) {
-    const t = normalize([e.type, e.event_type, e.eventType, e.kind, e.incidentType, e.event?.name, e.detail, e.name].map(val).join(' '));
-    const player = val(e.player || e.player_name || e.playerName || e.scorer || e.athlete);
+    const t = normalize([e.type, e.event_type, e.eventType, e.kind, e.incidentType, e.incident_type, e.event?.name, e.detail, e.name, e.event_name].map(val).join(' '));
+    const player = val(e.player || e.player_name || e.playerName || e.scorer || e.athlete || e.player?.name);
     const club = val(e.team || e.team_name || e.teamName);
     const p = player ? ' – ' + player : '';
     const c = club ? ' (' + club + ')' : '';
@@ -79,7 +85,7 @@
     return '';
   }
   function minute(e) {
-    let v = e.minute ?? e.elapsed ?? e.match_minute ?? e.time?.elapsed ?? e.time ?? e.clock ?? '';
+    let v = e.minute ?? e.elapsed ?? e.match_minute ?? e.time?.elapsed ?? e.time?.minute ?? e.time ?? e.clock ?? e.matchTime ?? '';
     if (v && typeof v === 'object') v = v.elapsed ?? v.minute ?? '';
     return String(v).trim().replace(/[′']/g,'');
   }
@@ -127,7 +133,7 @@
       try {
         const list = matches(await get(path));
         const m = list.find(x => isMatch(x) && dated(x));
-        if (m?.slug) return m;
+        if (m && getSlug(m)) return m;
       } catch (_) {}
     }
     return null;
@@ -142,7 +148,7 @@
           note('Δεν έχει βρεθεί ακόμη επιβεβαιωμένη ροή για αυτόν τον αγώνα.');
           return;
         }
-        matchSlug = fixture.slug;
+        matchSlug = getSlug(fixture);
       }
       const j = await get('/api/widget/match/?sport=football&slug=' + encodeURIComponent(matchSlug));
       const m = j.match ?? j.data?.match ?? j.data ?? j;
@@ -154,8 +160,9 @@
       status.textContent = translateStatus(currentStatus);
       if (pitch) pitch.style.display = '';
       syncPitch();
-      let events = m.timeline ?? m.events ?? m.incidents ?? m.match_events ?? m.play_by_play ?? j.timeline ?? j.events ?? j.data?.timeline ?? [];
-      if (!Array.isArray(events)) events = events.events || events.items || events.incidents || events.plays || [];
+      let events = m.incidents ?? m.timeline ?? m.events ?? m.match_events ?? m.play_by_play ??
+                   j.incidents ?? j.timeline ?? j.events ?? j.data?.incidents ?? j.data?.timeline ?? j.data?.events ?? [];
+      if (!Array.isArray(events)) events = events.incidents || events.events || events.items || events.plays || [];
       render(Array.isArray(events)?events:[]);
     } catch (e) {
       status.textContent = 'Η ενημέρωση δεν είναι διαθέσιμη';
