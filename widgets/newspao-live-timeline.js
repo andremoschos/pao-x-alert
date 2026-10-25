@@ -48,6 +48,8 @@
     return r.json();
   }
   function note(t) {
+    // Keep verified editorial incidents visible whenever the external API is unavailable.
+    if (timeline.querySelector('[data-np-editorial]')) return;
     timeline.replaceChildren();
     const p = document.createElement('p');
     p.style.cssText = 'margin:0;padding:10px 0;color:#5f7264';
