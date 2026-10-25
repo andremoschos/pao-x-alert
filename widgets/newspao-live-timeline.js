@@ -19,7 +19,7 @@
   }
   syncPitch();
   const api = 'https://sportscore.com';
-  let matchSlug = '', fixture = null;
+  let matchSlug = root.dataset.matchSlug || '', fixture = null;
   if (!score || !status || !timeline || !day || !homeKey || !awayKey) return;
   const val = x => x && typeof x === 'object' ? String(x.name || x.short_name || x.full_name || x.display_name || '') : String(x ?? '');
   const normalize = x => val(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9α-ω]/g, '');
@@ -153,10 +153,10 @@
       const j = await get('/api/widget/match/?sport=football&slug=' + encodeURIComponent(matchSlug));
       const m = j.match ?? j.data?.match ?? j.data ?? j;
       if ((side(m,'home') || side(m,'away')) && !isMatch(m)) throw new Error('Wrong match');
-      const hs = m.home_score ?? fixture.home_score ?? m.score?.home ?? m.scores?.home;
-      const as = m.away_score ?? fixture.away_score ?? m.score?.away ?? m.scores?.away;
+      const hs = m.home_score ?? fixture?.home_score ?? m.score?.home ?? m.scores?.home;
+      const as = m.away_score ?? fixture?.away_score ?? m.score?.away ?? m.scores?.away;
       if (hs !== undefined && as !== undefined && hs !== null && as !== null) score.textContent = hs + ' – ' + as;
-      const currentStatus = m.status_text || m.status || fixture.status_text || fixture.status || '';
+      const currentStatus = m.status_text || m.status || fixture?.status_text || fixture?.status || '';
       status.textContent = translateStatus(currentStatus);
       if (pitch) pitch.style.display = '';
       syncPitch();
