@@ -13,18 +13,7 @@
   const widget = root.querySelector('[data-sportscore="tracker"]');
   const placeholder = root.querySelector('[data-np-pitch-placeholder]');
   // Never cover a real SportScore tracker with the pre-match illustration.
-  const syncPitch = () => {
-    if (!placeholder) return;
-    if (widget?.querySelector('iframe')) {
-      placeholder.style.display = 'none';
-    } else {
-      placeholder.style.display = '';
-      const label = placeholder.querySelector('[data-np-pitch-label]');
-      if (label && Date.now() >= Date.parse('2026-10-25T16:00:00Z')) {
-        label.textContent = 'Αναμονή διαθέσιμου LIVE tracker';
-      }
-    }
-  };
+  const syncPitch = () => { if (placeholder) placeholder.style.display='none'; };
   if (widget && typeof MutationObserver !== 'undefined') {
     new MutationObserver(syncPitch).observe(widget, {childList:true, subtree:true});
   }
@@ -44,7 +33,7 @@
     return !s || s.slice(0, 10) === day;
   };
   const matches = j => {
-    const x = j.matches ?? j.fixtures ?? j.data?.matches ?? j.data?.fixtures ?? j.data ?? [];
+    const x = j.matches ?? j.fixtures ?? j.results ?? j.items ?? j.data?.matches ?? j.data?.fixtures ?? j.data?.items ?? j.data ?? [];
     return Array.isArray(x) ? x : [];
   };
   async function get(path) {
@@ -60,22 +49,22 @@
     timeline.append(p);
   }
   function describe(e) {
-    const t = normalize([e.type, e.event_type, e.eventType, e.kind, e.event?.name, e.detail, e.name].map(val).join(' '));
+    const t = normalize([e.type, e.event_type, e.eventType, e.kind, e.incidentType, e.event?.name, e.detail, e.name].map(val).join(' '));
     const player = val(e.player || e.player_name || e.playerName || e.scorer || e.athlete);
     const club = val(e.team || e.team_name || e.teamName);
     const p = player ? ' – ' + player : '';
     const c = club ? ' (' + club + ')' : '';
     if (/var/.test(t)) return '📺 Έλεγχος VAR' + c;
     if (/disallowedgoal|goaldisallowed|cancelledgoal|goalcancelled/.test(t)) return 'Ακυρώθηκε γκολ' + c;
-    if (/missedpenalty|penaltymiss|penaltymissed/.test(t)) return '❌ Χαμένο πέναλτι' + p + c;
-    if (/owngoal/.test(t)) return '⚽ Αυτογκόλ' + p + c;
-    if (/goal/.test(t) && !/goalkick/.test(t)) return '⚽ ΓΚΟΛ' + (/penalty/.test(t) ? ' από πέναλτι' : '') + p + c;
+    if (/missedpenalty|penaltymiss|penaltymissed|penaltysaved/.test(t)) return '❌ Χαμένο πέναλτι' + p + c;
+    if (/owngoal|autogoal/.test(t) || e.own_goal===true) return '⚽ Αυτογκόλ' + p + c;
+    if (/goal/.test(t) && !/goalkick|goalkeeper/.test(t)) return '⚽ ΓΚΟΛ' + (/penalty/.test(t)||e.penalty===true ? ' με πέναλτι' : '') + p + c;
     if (/penalty/.test(t)) return '🎯 Πέναλτι' + c;
-    if (/secondyellow|redcard|red/.test(t)) return '🟥 Κόκκινη κάρτα' + p + c;
-    if (/yellow|yellowcard/.test(t)) return '🟨 Κίτρινη κάρτα' + p + c;
+    if (/secondyellow|yellowred|redcard|red/.test(t)) return '🟥 Κόκκινη κάρτα' + p + c;
+    if (/yellow|booking/.test(t)) return '🟨 Κίτρινη κάρτα' + p + c;
     if (/substitution|substitut|playerswitch|subon|suboff/.test(t)) {
-      const incoming = val(e.player_in || e.playerIn);
-      const outgoing = val(e.player_out || e.playerOut);
+      const incoming = val(e.player_in || e.playerIn || e.in);
+      const outgoing = val(e.player_out || e.playerOut || e.out);
       return '🔄 Αλλαγή' + (incoming ? ' – μέσα ' + incoming : '') + (outgoing ? ', έξω ' + outgoing : '') + (!incoming && !outgoing ? p : '') + c;
     }
     if (/bigchance|dangerousattack/.test(t)) return 'Μεγάλη ευκαιρία' + p + c;
@@ -92,7 +81,7 @@
   function minute(e) {
     let v = e.minute ?? e.elapsed ?? e.match_minute ?? e.time?.elapsed ?? e.time ?? e.clock ?? '';
     if (v && typeof v === 'object') v = v.elapsed ?? v.minute ?? '';
-    return String(v).trim();
+    return String(v).trim().replace(/[′']/g,'');
   }
   function render(events) {
     const found = new Set(), rows = [];
@@ -129,6 +118,7 @@
   }
   async function findMatch() {
     const paths = [
+      '/api/v1/fixtures/?sport=football&date=' + encodeURIComponent(day) + '&limit=200',
       '/api/v1/fixtures/?sport=football&date=' + encodeURIComponent(day) + '&team=' + encodeURIComponent(teamSlug) + '&limit=200',
       '/api/widget/team/?sport=football&slug=' + encodeURIComponent(teamSlug) + '&limit=30',
       '/api/widget/matches/?sport=football&limit=50'
@@ -164,8 +154,8 @@
       status.textContent = translateStatus(currentStatus);
       if (pitch) pitch.style.display = '';
       syncPitch();
-      let events = m.timeline ?? m.events ?? m.incidents ?? j.timeline ?? j.events ?? [];
-      if (!Array.isArray(events)) events = events.events || events.items || [];
+      let events = m.timeline ?? m.events ?? m.incidents ?? m.match_events ?? m.play_by_play ?? j.timeline ?? j.events ?? j.data?.timeline ?? [];
+      if (!Array.isArray(events)) events = events.events || events.items || events.incidents || events.plays || [];
       render(Array.isArray(events)?events:[]);
     } catch (e) {
       status.textContent = 'Η ενημέρωση δεν είναι διαθέσιμη';
