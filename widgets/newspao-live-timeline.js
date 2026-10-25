@@ -10,6 +10,25 @@
   const status = root.querySelector('[data-np-status]');
   const timeline = root.querySelector('[data-np-events]');
   const pitch = root.querySelector('[data-np-pitch]');
+  const widget = root.querySelector('[data-sportscore="tracker"]');
+  const placeholder = root.querySelector('[data-np-pitch-placeholder]');
+  // Never cover a real SportScore tracker with the pre-match illustration.
+  const syncPitch = () => {
+    if (!placeholder) return;
+    if (widget?.querySelector('iframe')) {
+      placeholder.style.display = 'none';
+    } else {
+      placeholder.style.display = '';
+      const label = placeholder.querySelector('[data-np-pitch-label]');
+      if (label && Date.now() >= Date.parse('2026-10-25T16:00:00Z')) {
+        label.textContent = 'Αναμονή διαθέσιμου LIVE tracker';
+      }
+    }
+  };
+  if (widget && typeof MutationObserver !== 'undefined') {
+    new MutationObserver(syncPitch).observe(widget, {childList:true, subtree:true});
+  }
+  syncPitch();
   const api = 'https://sportscore.com';
   let matchSlug = '', fixture = null;
   if (!score || !status || !timeline || !day || !homeKey || !awayKey) return;
@@ -143,8 +162,7 @@
       const currentStatus = m.status_text || m.status || fixture.status_text || fixture.status || '';
       status.textContent = translateStatus(currentStatus);
       if (pitch) pitch.style.display = '';
-      const placeholder = pitch?.querySelector('[data-np-pitch-placeholder]');
-      if (placeholder && pitch.querySelector('iframe') && /live|inprogress|firsthalf|secondhalf/.test(normalize(currentStatus))) placeholder.style.display = 'none';
+      syncPitch();
       let events = m.timeline ?? m.events ?? m.incidents ?? j.timeline ?? j.events ?? [];
       if (!Array.isArray(events)) events = events.events || events.items || [];
       render(Array.isArray(events)?events:[]);
