@@ -129,6 +129,7 @@
   }
   async function findMatch() {
     const paths = [
+      '/api/v1/fixtures/?sport=football&date=' + encodeURIComponent(day) + '&team=' + encodeURIComponent(teamSlug) + '&limit=200',
       '/api/widget/team/?sport=football&slug=' + encodeURIComponent(teamSlug) + '&limit=30',
       '/api/widget/matches/?sport=football&limit=50'
     ];
