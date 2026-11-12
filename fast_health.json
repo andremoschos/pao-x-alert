@@ -168,14 +168,14 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 51253,
-  "runner_started_or_alive_at": "2026-11-12T03:29:16.812911+00:00",
+  "cycle": 51254,
+  "runner_started_or_alive_at": "2026-11-12T03:31:16.860718+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-11-12T03:29:22.236170+00:00",
+      "last_ok": "2026-11-12T03:31:22.355687+00:00",
       "last_error": null,
-      "last_duration_seconds": 5.42,
+      "last_duration_seconds": 5.49,
       "last_attempt": "2026-09-07T23:49:09.988735+00:00"
     },
     "only_panathinaikos_x": {
@@ -183,46 +183,46 @@
       "last_attempt": "2026-09-07T23:50:13.117137+00:00",
       "last_error": null,
       "last_duration_seconds": 0.01,
-      "last_ok": "2026-11-12T03:29:22.245076+00:00"
+      "last_ok": "2026-11-12T03:31:22.364371+00:00"
     },
     "google_news_web": {
       "status": "paused",
       "last_ok": "2026-10-24T10:36:41.231267+00:00",
       "last_error": null,
       "last_duration_seconds": 2.69,
-      "last_attempt": "2026-11-12T03:29:22.245119+00:00"
+      "last_attempt": "2026-11-12T03:31:22.364401+00:00"
     },
     "official_pao": {
-      "status": "error",
-      "last_ok": "2026-11-12T03:29:08.953256+00:00",
-      "last_error": "RuntimeError: Official X recovery failed for all sources",
-      "last_duration_seconds": 41.78,
+      "status": "ok",
+      "last_ok": "2026-11-12T03:31:45.784371+00:00",
+      "last_error": null,
+      "last_duration_seconds": 23.42,
       "last_attempt": "2026-11-12T03:29:22.248349+00:00"
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-11-12T03:30:04.029007+00:00",
+      "last_ok": "2026-11-12T03:31:45.788323+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
     },
     "conference_opponents": {
       "status": "ok",
-      "last_ok": "2026-11-12T03:29:22.248325+00:00",
+      "last_ok": "2026-11-12T03:31:22.367716+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-11-08T09:25:26.735636+00:00"
     },
     "transferfeed_panathinaikos": {
       "status": "ok",
-      "last_ok": "2026-11-12T03:29:22.245141+00:00",
+      "last_ok": "2026-11-12T03:31:22.364423+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-31T20:03:11.613355+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-11-12T03:30:04.029031+00:00",
-  "last_cycle_duration_seconds": 47.22,
+  "last_cycle_finished_at": "2026-11-12T03:31:45.788356+00:00",
+  "last_cycle_duration_seconds": 28.93,
   "ntfy": {
     "local_budget_day_utc": "2026-11-12",
     "local_successful_publications": 0,
