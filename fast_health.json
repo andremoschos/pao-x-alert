@@ -168,64 +168,64 @@
       "url": "https://github.com/andremoschos/pao-x-alert/actions/runs/32956718804"
     }
   ],
-  "cycle": 55615,
-  "runner_started_or_alive_at": "2026-11-18T14:39:42.885704+00:00",
+  "cycle": 55616,
+  "runner_started_or_alive_at": "2026-11-18T14:44:54.650428+00:00",
   "components": {
     "x_general": {
       "status": "ok",
-      "last_ok": "2026-11-18T14:41:27.545786+00:00",
+      "last_ok": "2026-11-18T14:45:37.482655+00:00",
       "last_error": null,
-      "last_duration_seconds": 104.66,
+      "last_duration_seconds": 42.83,
       "last_attempt": "2026-09-07T23:49:09.988735+00:00"
     },
     "only_panathinaikos_x": {
       "status": "ok",
       "last_attempt": "2026-11-18T06:21:12.435942+00:00",
       "last_error": null,
-      "last_duration_seconds": 82.77,
-      "last_ok": "2026-11-18T14:42:50.319219+00:00"
+      "last_duration_seconds": 0.01,
+      "last_ok": "2026-11-18T14:45:37.488239+00:00"
     },
     "google_news_web": {
       "status": "paused",
       "last_ok": "2026-10-24T10:36:41.231267+00:00",
       "last_error": null,
       "last_duration_seconds": 2.69,
-      "last_attempt": "2026-11-18T14:42:50.319251+00:00"
+      "last_attempt": "2026-11-18T14:45:37.488262+00:00"
     },
     "official_pao": {
       "status": "ok",
-      "last_ok": "2026-11-18T14:44:05.733462+00:00",
+      "last_ok": "2026-11-18T14:46:50.901091+00:00",
       "last_error": null,
-      "last_duration_seconds": 25.71,
+      "last_duration_seconds": 24.08,
       "last_attempt": "2026-11-18T06:11:58.810474+00:00"
     },
     "youtube_pao": {
       "status": "ok",
-      "last_ok": "2026-11-18T14:44:47.104746+00:00",
+      "last_ok": "2026-11-18T14:47:32.445996+00:00",
       "last_error": null,
-      "last_duration_seconds": 41.37,
+      "last_duration_seconds": 41.54,
       "last_attempt": "2026-08-27T22:41:38.053843+00:00"
     },
     "conference_opponents": {
       "status": "error",
       "last_ok": "2026-11-18T14:30:59.949299+00:00",
       "last_error": "RuntimeError: Telegram Conference delivery failed for Φράιμπουργκ",
-      "last_duration_seconds": 49.7,
-      "last_attempt": "2026-11-18T14:42:50.319281+00:00"
+      "last_duration_seconds": 49.34,
+      "last_attempt": "2026-11-18T14:45:37.488294+00:00"
     },
     "transferfeed_panathinaikos": {
       "status": "ok",
-      "last_ok": "2026-11-18T14:42:50.319269+00:00",
+      "last_ok": "2026-11-18T14:45:37.488277+00:00",
       "last_error": null,
       "last_duration_seconds": 0.0,
       "last_attempt": "2026-08-31T20:03:11.613355+00:00"
     }
   },
-  "last_cycle_finished_at": "2026-11-18T14:44:47.104778+00:00",
-  "last_cycle_duration_seconds": 304.22,
+  "last_cycle_finished_at": "2026-11-18T14:47:32.446029+00:00",
+  "last_cycle_duration_seconds": 157.8,
   "ntfy": {
     "local_budget_day_utc": "2026-11-18",
-    "local_successful_publications": 9,
+    "local_successful_publications": 12,
     "local_daily_budget": 249,
     "circuit_remaining_seconds": 0.0,
     "last_429": null,
@@ -235,7 +235,7 @@
       "last_ok": "2026-11-18T14:28:47.148969+00:00",
       "last_error": "ReadTimeout: Telegram send failed route=youtube_pao",
       "successful_sends": 266,
-      "failed_sends": 21
+      "failed_sends": 26
     }
   }
 }
